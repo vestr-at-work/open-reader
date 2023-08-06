@@ -1,4 +1,4 @@
-# OPEN READER
+# 📖 Open Reader
 Open-Source QR Code Reader
 
 ## Specification in Czech:
