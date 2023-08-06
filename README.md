@@ -1,7 +1,7 @@
 # 📖 Open Reader
 Open-Source QR Code Reader
 
-## Specification in Czech:
+## Specification in Czech
 >Cílem programu je konzolová aplikace v jazyce C#, která na standardním vstupu dostane cestu k
 obrázku/fotce QR kódu ( https://en.wikipedia.org/wiki/QR_code# ) a na standardní výstup vypíše
 obsah QR kódu.
@@ -19,3 +19,6 @@ bude aplikace využívat delegáty a také generické metody.
 Návrh aplikace bude koncipován tak, aby co nejvíce zdrojového kódu, který by byl potenciálně
 společný s čtečkami jiných 2D kódů, mohlo být v samostatném balíku následně využívaném jako
 knihovna.
+
+## Diagram of the decoding process
+![Diagram of the decoding process](./DecodingStepsDiagram.drawio.svg)
