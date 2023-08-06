@@ -1,8 +1,10 @@
 {
   "version": 2,
-  "dgSpecHash": "/LBterCN/6XxoQKjwBfvYuPhAfXF8mU9VHdA5MbntrC/Eh+A6yX0715Jrwbbv7I134bkLirBbvkuC+cO5SITnQ==",
+  "dgSpecHash": "7RGR10MSBM/tCvaqizrn9kcU5Lyci8bhv/bvLRTmYjNv4mn6AixPS9sjkGl6wiu0DmEgw/SnD2utUo5DixkXZw==",
   "success": true,
   "projectFilePath": "/home/vestr/moje soubory/matfyz/pokročilé programování v jazyce c#/open-reader/OpenReader/OpenReader.csproj",
-  "expectedPackageFiles": [],
+  "expectedPackageFiles": [
+    "/home/vestr/.nuget/packages/sixlabors.imagesharp/3.0.1/sixlabors.imagesharp.3.0.1.nupkg.sha512"
+  ],
   "logs": []
 }
