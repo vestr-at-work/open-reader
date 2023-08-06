@@ -7,4 +7,11 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <Reference Include="CodeReaderCommons">
+      <HintPath>..\CodeReaderCommons\bin\Debug\net7.0\CodeReaderCommons.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
+
 </Project>
