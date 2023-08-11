@@ -1,32 +1,37 @@
 ﻿using System.Threading;
+using SixLabors.ImageSharp;
 
-namespace CodeReaderCommons;
-public class CodeReaderCommons {
-    // public void ProcessUsingLockbitsAndUnsafeAndParallel(Bitmap processedBitmap) {
-    //     unsafe {
-    //         BitmapData bitmapData = processedBitmap.LockBits(new Rectangle(0, 0, processedBitmap.Width, processedBitmap.Height), ImageLockMode.ReadWrite, processedBitmap.PixelFormat);
+namespace CodeReaderCommons {
+    public static class Commons {
+        public static void Binarize(Image<Rgba32> image) {
+            image.ProcessPixelRows(accessor => {
+                // 
+                //Rgba32 transparent = Color.Transparent;
 
-    //         int bytesPerPixel = Bitmap.GetPixelFormatSize(processedBitmap.PixelFormat) / 8;
-    //         int heightInPixels = bitmapData.Height;
-    //         int widthInBytes = bitmapData.Width * bytesPerPixel;
-    //         byte* PtrFirstPixel = (byte*)bitmapData.Scan0;
+                for (int y = 0; y < accessor.Height; y++) {
+                    Span<Rgba32> pixelRow = accessor.GetRowSpan(y);
 
-    //         Parallel.For(0, heightInPixels, y => {
-    //             byte* currentLine = PtrFirstPixel + (y * bitmapData.Stride);
-    //             for (int x = 0; x < widthInBytes; x = x + bytesPerPixel)
-    //             {
-    //                 int oldBlue = currentLine[x];
-    //                 int oldGreen = currentLine[x + 1];
-    //                 int oldRed = currentLine[x + 2];
+                    // pixelRow.Length has the same value as accessor.Width,
+                    // but using pixelRow.Length allows the JIT to optimize away bounds checks:
+                    for (int x = 0; x < pixelRow.Length; x++) {
+                        // Get a reference to the pixel at position x
+                        ref Rgba32 pixel = ref pixelRow[x];
 
-    //                 currentLine[x] = (byte)oldBlue;
-    //                 currentLine[x + 1] = (byte)oldGreen;
-    //                 currentLine[x + 2] = (byte)oldRed;
-    //             }
-    //         });
-    //         processedBitmap.UnlockBits(bitmapData);
-    //     }
-    // }
+                        //could be any channel since the image is in grayscale
+                        if (pixel.R > 127) {
+
+                            // Color is pixel-agnostic, but it's implicitly convertible to the Rgba32 pixel type
+                            // Overwrite the pixel referenced by 'ref Rgba32 pixel':
+                            pixel = Color.White;
+                        }
+                        else {
+                            pixel = Color.Black;
+                        } 
+                    }
+                }
+            });
+        }
+    }
 }
 
 

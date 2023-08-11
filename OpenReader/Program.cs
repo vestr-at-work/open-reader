@@ -1,15 +1,21 @@
-﻿
+﻿using SixLabors.ImageSharp.Processing.Processors.Binarization;
+using CodeReaderCommons;
+
 namespace QRCodeReader {
     public class Program {
         public static void Main(string[] args) {
             // Bitmap test = new Bitmap("../TestData/QRCodeTest1.jpeg");
             // CodeReaderCommons.ProcessUsingLockbitsAndUnsafeAndParallel(test);
 
-            using (Image test = Image.Load("../TestData/QRCodeTest1.jpeg")) {
+            using (Image<Rgba32> image = Image.Load<Rgba32>("../TestData/QRCodeTest1.jpeg")) {
 
-                test.Mutate(x => x.Grayscale());
+                image.Mutate(x => x.Grayscale());
+                Commons.Binarize(image);
 
-                test.Save("../TestData/QRCodeTest1OUTPUT.png");
+                //ImageProcessor<Rgba32> binarizationProcessor = CreatePixelSpecificProcessor<Rgba32>(new Configuration(), test, new Rectangle(0, 0, test.Width, test.Height));
+                //binarizationProcessor.Execute();
+
+                image.Save("../TestData/QRCodeTest1OUTPUT.png");
             }
         }
     }
