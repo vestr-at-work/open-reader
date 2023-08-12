@@ -8,14 +8,15 @@ namespace QRCodeReader {
             // CodeReaderCommons.ProcessUsingLockbitsAndUnsafeAndParallel(test);
 
             using (Image<Rgba32> image = Image.Load<Rgba32>("../TestData/QRCodeTest1.jpeg")) {
-
+                
+                image.Mutate(x => x.Resize(300,0));
                 image.Mutate(x => x.Grayscale());
-                Commons.Binarize(image);
+                var binarizedImage = Commons.Binarize(image);
 
                 //ImageProcessor<Rgba32> binarizationProcessor = CreatePixelSpecificProcessor<Rgba32>(new Configuration(), test, new Rectangle(0, 0, test.Width, test.Height));
                 //binarizationProcessor.Execute();
 
-                image.Save("../TestData/QRCodeTest1OUTPUT.png");
+                binarizedImage.Save("../TestData/QRCodeTest1OUTPUT.png");
             }
         }
     }
