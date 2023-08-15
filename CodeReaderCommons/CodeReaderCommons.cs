@@ -1,5 +1,6 @@
 ﻿using System.Threading;
 using SixLabors.ImageSharp;
+using System.Numerics;
 
 namespace CodeReaderCommons {
     public static class Commons {
@@ -26,20 +27,20 @@ namespace CodeReaderCommons {
             //Possibly should be input parameter 
             const int windowSize = 25;
             //2D array of the running sum of pixel intensity values
-            WelfordSampleInfo[,] deviationSampleMatrix = new WelfordSampleInfo[image.Width + ((windowSize / 2) * 2), image.Height + ((windowSize / 2) * 2)];
-            //TODO should be a function
-            for (int j = 0; j < image.Height + ((windowSize / 2) * 2); j++) {
-                for (int i = 0; i < image.Width + ((windowSize / 2) * 2); i++) {
-                    deviationSampleMatrix[i, j] = new WelfordSampleInfo();
-                }
-            }
+            // WelfordSampleInfo[,] deviationSampleMatrix = new WelfordSampleInfo[image.Width + ((windowSize / 2) * 2), image.Height + ((windowSize / 2) * 2)];
+            // //TODO should be a function
+            // for (int j = 0; j < image.Height + ((windowSize / 2) * 2); j++) {
+            //     for (int i = 0; i < image.Width + ((windowSize / 2) * 2); i++) {
+            //         deviationSampleMatrix[i, j] = new WelfordSampleInfo();
+            //     }
+            // }
         
             //2D array of the running sum of pixel intensity values
             //int[,] intensitySumMatrix = new int[image.Width + ((windowSize / 2) * 2), image.Height + ((windowSize / 2) * 2)];
             //2D array of the running sum of pixel intensity deviation values
             //int[,] deviationSumMatrix = new int[image.Width + ((windowSize / 2) * 2), image.Height + ((windowSize / 2) * 2)];
             //the "+ 2" is there to avoid bound checks when convolving with kernel
-            int[,] thresholdT1Matrix = new int[image.Width + 2, image.Height + 2];
+            Single[,] thresholdT1Matrix = new Single[image.Width + 2, image.Height + 2];
             //int[,] thresholdT2Matrix = new int[image.Width, image.Height];
             int[,] convolutionKernel = new int[,] {{1, 1, 1}, {1, 2, 1}, {1, 1, 1}};
             const int kernelSize = 3;
@@ -47,33 +48,92 @@ namespace CodeReaderCommons {
             //Padded image to avoid bound checks
             Image<Rgba32> paddedImage = GetPaddedImage(image, windowSize / 2);
             
-            //First part of the algorithm. Calculate T1 from the paper.
-            paddedImage.ProcessPixelRows(accessor => {
-                for (int y = windowSize / 2; y < accessor.Height - (windowSize / 2); y++) {
-                    Span<Rgba32> pixelRow = accessor.GetRowSpan(y);
+            // //First part of the algorithm. Calculate T1 from the paper.
+            // paddedImage.ProcessPixelRows(accessor => {
+            //     for (int y = windowSize / 2; y < accessor.Height - (windowSize / 2); y++) {
+            //         Span<Rgba32> pixelRow = accessor.GetRowSpan(y);
 
-                    // pixelRow.Length has the same value as accessor.Width,
-                    // but using pixelRow.Length allows the JIT to optimize away bounds checks:
-                    for (int x = windowSize / 2; x < pixelRow.Length - (windowSize / 2); x++) {
-                        // Get a reference to the pixel at position x
-                        ref Rgba32 pixel = ref pixelRow[x];
-                        int pixelValue = (int)pixel.R;
+            //         // pixelRow.Length has the same value as accessor.Width,
+            //         // but using pixelRow.Length allows the JIT to optimize away bounds checks:
+            //         for (int x = windowSize / 2; x < pixelRow.Length - (windowSize / 2); x++) {
+            //             // Get a reference to the pixel at position x
+            //             ref Rgba32 pixel = ref pixelRow[x];
+            //             int pixelValue = (int)pixel.R;
 
-                        for (int j = y - (windowSize / 2); j <= y + (windowSize / 2); j++) {
-                            for (int i = x - (windowSize / 2); i <= x + (windowSize / 2); i++) {
-                                //Console.WriteLine($"{i}, {j},  matrix: {image.Width + (windowSize / 2)}x{image.Height + (windowSize / 2)}");
-                                //intensitySumMatrix[i,j] += pixelValue;
-                                var deviationSampleInfo = deviationSampleMatrix[i, j];
-                                deviationSampleInfo.count++;
-                                double delta1 = pixelValue - deviationSampleInfo.sampleMean;
-                                deviationSampleInfo.sampleMean += (delta1 / deviationSampleInfo.count);
-                                double delta2 = pixelValue - deviationSampleInfo.sampleMean;
-                                deviationSampleInfo.sampleM2 += (delta1 * delta2);
-                            }
+            //             for (int j = y - (windowSize / 2); j <= y + (windowSize / 2); j++) {
+            //                 for (int i = x - (windowSize / 2); i <= x + (windowSize / 2); i++) {
+            //                     //Console.WriteLine($"{i}, {j},  matrix: {image.Width + (windowSize / 2)}x{image.Height + (windowSize / 2)}");
+            //                     //intensitySumMatrix[i,j] += pixelValue;
+            //                     var deviationSampleInfo = deviationSampleMatrix[i, j];
+            //                     deviationSampleInfo.count++;
+            //                     double delta1 = pixelValue - deviationSampleInfo.sampleMean;
+            //                     deviationSampleInfo.sampleMean += (delta1 / deviationSampleInfo.count);
+            //                     double delta2 = pixelValue - deviationSampleInfo.sampleMean;
+            //                     deviationSampleInfo.sampleM2 += (delta1 * delta2);
+            //                 }
+            //             }
+            //         }
+            //     }
+            // });
+
+
+            Memory<Rgba32> pixelMemory;
+            paddedImage.DangerousTryGetSinglePixelMemory(out pixelMemory);
+            var pixelSpan = pixelMemory.Span;
+            for (int y = windowSize / 2; y < paddedImage.Height - (windowSize / 2); y++) {
+                for (int x = windowSize / 2; x < paddedImage.Width - (windowSize / 2); x++) {
+                    //Console.WriteLine($"{row[x][0]}, {row[x][1]}, {row[x][2]}, {row[x][3]}");
+                    var pixelValue = pixelSpan[(y * paddedImage.Width) + x].R;
+                    double sampleM2 = 0;
+                    double sampleMean = 0;
+                    int count = 0;
+                    for (int j = y - (windowSize / 2); j < y + (windowSize / 2) - 1; j+= 6) {
+                        for (int i = x - (windowSize / 2); i <= x + (windowSize / 2); i+= 6) {
+                            var currentPixelValue = pixelSpan[(j * paddedImage.Width) + i].R;
+                            count++;
+                            double delta1 = currentPixelValue - sampleMean;
+                            sampleMean += (delta1 / count);
+                            double delta2 = currentPixelValue - sampleMean;
+                            sampleM2 += (delta1 * delta2);
                         }
                     }
+
+                    double standardDeviation = Math.Sqrt(sampleM2 / (count - 1));
+                    const int R = 1250;
+                    byte thresholdT1 = (byte)(sampleMean * (1 + (standardDeviation / R)));
+                    thresholdT1Matrix[x - (windowSize / 2) + 1, y - (windowSize / 2) + 1] = thresholdT1;
                 }
-            });
+            }
+
+            //  //First part of the algorithm. Calculate T1 from the paper.
+            // image.Mutate(c => c.ProcessPixelRowsAsVector4(row => {
+            //     for (int x = windowSize / 2; x < row.Length - (windowSize / 2); x++) {
+            //         //Console.WriteLine($"{row[x][0]}, {row[x][1]}, {row[x][2]}, {row[x][3]}");
+            //         var pixelValue = (byte)(row[x][0] * 255);
+            //         double sampleM2 = 0;
+            //         double sampleMean = 0;
+            //         int count = 0;
+            //         for (int i = x - (windowSize / 2); i <= x + (windowSize / 2); i++) {
+            //             var currentPixelValue = (byte)(row[i][0] * 255);
+            //             count++;
+            //             double delta1 = currentPixelValue - sampleMean;
+            //             sampleMean += (delta1 / count);
+            //             double delta2 = currentPixelValue - sampleMean;
+            //             sampleM2 += (delta1 * delta2);
+            //         }
+
+            //         double standardDeviation = Math.Sqrt(sampleM2 / (count - 1));
+            //         const int R = 1250;
+            //         byte thresholdT1 = (byte)(sampleMean * (1 + (standardDeviation / R)));
+
+            //         if (pixelValue > thresholdT1) {
+            //             row[x] = new Vector4(1, 1, 1, 1); //white
+            //         }
+            //         else {
+            //             row[x] = new Vector4(0, 0, 0, 1); //black
+            //         }
+            //     }
+            // }));
 
             // //Calculate the deviation (this and previous step unfortunatelly cannot be done in one iteration)
             // paddedImage.ProcessPixelRows(accessor => {
@@ -112,22 +172,22 @@ namespace CodeReaderCommons {
             //     }
             // }
 
-            //Compute threshold
-            for (int j = 0; j < image.Height; j++) {
-                for (int i = 0; i < image.Width; i++) {
-                    var welfordInfo = deviationSampleMatrix[i + (windowSize / 2), j + (windowSize / 2)];
-                    double windowMean = welfordInfo.sampleMean;
-                    //Console.WriteLine($"sample: {windowMean}, real: {(double)intensitySumMatrix[i + (windowSize / 2), j + (windowSize / 2)] / (windowSize * windowSize)}");
-                    double windowStandardDeviation = Math.Sqrt(welfordInfo.sampleM2 / (welfordInfo.count - 1));
-                    //double windowStandardDeviationNotSample = Math.Sqrt((double)(deviationSumMatrix[i + (windowSize / 2), j + (windowSize / 2)] / ((windowSize * windowSize) - 1)));
-                    //Console.WriteLine($"sample: {windowStandardDeviation}, real: {windowStandardDeviationNotSample}");
-                    const int R = 1250;
-                    int thresholdT1 = (int)(windowMean * (1 + (windowStandardDeviation / R)));
-                    //Console.WriteLine($"{i}, {j},  matrix: {image.Width}x{image.Height}");
-                    //"+ 1" to compensate for padding
-                    thresholdT1Matrix[i + 1,j + 1] = thresholdT1;
-                }
-            }
+            // //Compute threshold
+            // for (int j = 0; j < image.Height; j++) {
+            //     for (int i = 0; i < image.Width; i++) {
+            //         var welfordInfo = deviationSampleMatrix[i + (windowSize / 2), j + (windowSize / 2)];
+            //         double windowMean = welfordInfo.sampleMean;
+            //         //Console.WriteLine($"sample: {windowMean}, real: {(double)intensitySumMatrix[i + (windowSize / 2), j + (windowSize / 2)] / (windowSize * windowSize)}");
+            //         double windowStandardDeviation = Math.Sqrt(welfordInfo.sampleM2 / (welfordInfo.count - 1));
+            //         //double windowStandardDeviationNotSample = Math.Sqrt((double)(deviationSumMatrix[i + (windowSize / 2), j + (windowSize / 2)] / ((windowSize * windowSize) - 1)));
+            //         //Console.WriteLine($"sample: {windowStandardDeviation}, real: {windowStandardDeviationNotSample}");
+            //         const int R = 1250;
+            //         Single thresholdT1 = (Single)(windowMean * (1 + (windowStandardDeviation / R)));
+            //         //Console.WriteLine($"{i}, {j},  matrix: {image.Width}x{image.Height}");
+            //         //"+ 1" to compensate for padding
+            //         thresholdT1Matrix[i + 1,j + 1] = thresholdT1;
+            //     }
+            // }
 
 
             image.ProcessPixelRows(accessor => {
@@ -138,14 +198,14 @@ namespace CodeReaderCommons {
                     // but using pixelRow.Length allows the JIT to optimize away bounds checks:
                     for (int x = 0; x < pixelRow.Length; x++) {
                         //TODO: make function from convolution
-                        int convolutionSum = 0;
+                        Single convolutionSum = 0;
                         for (int j = -(kernelSize / 2); j <= (kernelSize / 2); j++) {
                             for (int i = -(kernelSize / 2); i <= (kernelSize / 2); i++) {
                                 convolutionSum += convolutionKernel[(kernelSize / 2) + i, (kernelSize / 2) + j] * thresholdT1Matrix[x + i + 1, y + j + 1];
                             }
                         }
-                        int thresholdT2 = convolutionSum / kernelValuesSum;
-
+                        Single thresholdT2 = convolutionSum / kernelValuesSum;
+                        //Console.WriteLine($"thresholdt1: {thresholdT1Matrix[x + 1, y + 1]}, thresholdt2: {thresholdT2}");
                         // Get a reference to the pixel at position x
                         ref Rgba32 pixel = ref pixelRow[x];
                         int pixelValue = pixel.R;

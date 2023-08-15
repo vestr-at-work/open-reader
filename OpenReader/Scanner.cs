@@ -36,9 +36,6 @@ namespace CodeReader {
                 //image.Mutate(x => x.AdaptiveThreshold());
                 var binarizedImage = Commons.Binarize(image);
 
-
-                // ImageProcessor<Rgba32> binarizationProcessor = CreatePixelSpecificProcessor<Rgba32>(new Configuration(), image, new Rectangle(0, 0, image.Width, image.Height));
-                // binarizationProcessor.Execute();
                 sw.Stop();
                 Console.WriteLine($"time: {sw.Elapsed}");
                 binarizedImage.Save("../TestData/QRCodeTestOUTPUT.png");

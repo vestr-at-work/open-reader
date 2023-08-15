@@ -8,7 +8,7 @@ namespace QRCodeReader {
         public static void Main(string[] args) {
             I2DCodeScanner scanner = new QRScanner();
 
-            var result = scanner.Scan("../TestData/QRCodeTest1.jpeg");
+            var result = scanner.Scan("../TestData/QRCodeTest2.png");
 
             Console.WriteLine(result);
         }
