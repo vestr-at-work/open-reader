@@ -40,7 +40,7 @@ namespace CodeReader {
         /// <returns></returns>
         public ScanResult Scan<TPixel>(Image<TPixel> image) where TPixel : unmanaged, IPixel<TPixel> {
             
-            if (!ImageProcessor.TryGetRawData(out RawQRData codeData)) {
+            if (!ImageProcessor.TryGetRawData(image, out RawQRData codeData)) {
                 return new ScanResult() { Success = false };
             }
 
@@ -53,29 +53,12 @@ namespace CodeReader {
             }
 
 
-            {
-                Stopwatch sw = new Stopwatch();
-                sw.Start();
-                image.Mutate(x => x.Resize(300,0));
-                image.Mutate(x => x.Grayscale());
-                //image.Mutate(x => x.AdaptiveThreshold());
-                var binarizedImage = Commons.Binarize(image);
-
-                sw.Stop();
-                Console.WriteLine($"time: {sw.Elapsed}");
-                binarizedImage.Save("../TestData/QRCodeTestOUTPUT.png");
-                binarizedImage.Dispose();
-                
-                //image.Save("../TestData/QRCodeTest1OUTPUT.png");
-            }
-
-
             return new ScanResult() { Success = true, DataType = dataType, Data = data };
-
-
-            
         }
 
+        /// <summary>
+        /// Internal class encapsulating methods for decoding 
+        /// </summary>
         class QRCodeDecoder {
             public static bool TryGetFormatInfo(RawQRData codeData, out ContentType dataType) {
 
@@ -100,7 +83,28 @@ namespace CodeReader {
         /// </summary>
         static class ImageProcessor {
             
-            public static bool TryGetRawData(out RawQRData rawDataMatrix) {
+            public static bool TryGetRawData<TPixel>(Image<TPixel> image, out RawQRData rawDataMatrix) 
+                where TPixel : unmanaged, IPixel<TPixel> {
+
+                {
+                    Stopwatch sw = new Stopwatch();
+                    sw.Start();
+
+                    image.Mutate(x => x.Resize(300,0));
+                    image.Mutate(x => x.Grayscale());
+                    //image.Mutate(x => x.AdaptiveThreshold());
+                    var binarizedImage = Commons.Binarize(image);
+
+                    QRPatternFinder.TryGetFinderPatterns(binarizedImage);
+
+                    sw.Stop();
+                    Console.WriteLine($"time: {sw.Elapsed}");
+
+                    binarizedImage.Save("../TestData/QRCodeTestOUTPUT.png");
+                    binarizedImage.Dispose();
+                    
+                    //image.Save("../TestData/QRCodeTest1OUTPUT.png");
+                }
                 
                 // Dummy implementation
                 rawDataMatrix = new RawQRData();
@@ -111,11 +115,21 @@ namespace CodeReader {
             /// <summary>
             /// Class for finding and recognizing QR code patterns.
             /// </summary>
-            class PatternFinder {
+            static class QRPatternFinder {
                 private struct ColorBlock {
                     int startIndex;
                     int endIndex; 
                 }
+
+                public static bool TryGetFinderPatterns(Image<L8> image) {
+                    return true;
+                }
+
+                public static bool TryGetAlignmentPatterns(Image<L8> image) {
+                    return true;
+                }
+
+
             }
         }
     }
