@@ -5,7 +5,7 @@ using System.Diagnostics;
 namespace CodeReader {
 
     public class ScanResult {
-        public bool Succses;
+        public bool Success;
         public Type? DataType;
         public object? Data;
     }
@@ -13,7 +13,7 @@ namespace CodeReader {
 
     public interface I2DCodeScanner {
         //TODO: really should not be just supporting usage through file path....
-        public ScanResult Scan(string pathToInputImage);
+        public ScanResult Scan<TPixel>(Image<TPixel> image) where TPixel : unmanaged, IPixel<TPixel>;
     }
 
     /// <summary>
@@ -25,23 +25,22 @@ namespace CodeReader {
         /// <summary>
         /// Main method of this class. Scans the image and decodes the data.
         /// </summary>
-        /// <param name="path">Path to the image file</param>
+        /// <param name="image">Input image</param>
         /// <returns></returns>
-        public ScanResult Scan(string path) {
-            using (Image<Rgba32> image = Image.Load<Rgba32>(path)) {
-                Stopwatch sw = new Stopwatch();
-                sw.Start();
-                image.Mutate(x => x.Resize(300,0));
-                image.Mutate(x => x.Grayscale());
-                //image.Mutate(x => x.AdaptiveThreshold());
-                var binarizedImage = Commons.Binarize(image);
+        public ScanResult Scan<TPixel>(Image<TPixel> image) where TPixel : unmanaged, IPixel<TPixel> {
+            
+            Stopwatch sw = new Stopwatch();
+            sw.Start();
+            image.Mutate(x => x.Resize(300,0));
+            image.Mutate(x => x.Grayscale());
+            //image.Mutate(x => x.AdaptiveThreshold());
+            var binarizedImage = Commons.Binarize(image);
 
-                sw.Stop();
-                Console.WriteLine($"time: {sw.Elapsed}");
-                binarizedImage.Save("../TestData/QRCodeTestOUTPUT.png");
-                
-                //image.Save("../TestData/QRCodeTest1OUTPUT.png");
-            }
+            sw.Stop();
+            Console.WriteLine($"time: {sw.Elapsed}");
+            binarizedImage.Save("../TestData/QRCodeTestOUTPUT.png");
+            
+            //image.Save("../TestData/QRCodeTest1OUTPUT.png");
 
             return new ScanResult();
         }
