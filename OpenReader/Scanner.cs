@@ -4,15 +4,26 @@ using System.Diagnostics;
 
 namespace CodeReader {
 
+    public enum ContentType {
+        Text, 
+        Binary,
+        Action
+    }
+
     public class ScanResult {
-        public bool Success;
-        public Type? DataType;
-        public object? Data;
+        public bool Success { get; init; }
+        public ContentType? DataType { get; init; }
+        public object? Data { get; init; }
+    }
+
+    public class RawQRData {
+        public int EstimatedVersion { get; set; }
+        public int Size { get; set; }
+        public byte[,]? Data {get; set; }
     }
 
 
     public interface I2DCodeScanner {
-        //TODO: really should not be just supporting usage through file path....
         public ScanResult Scan<TPixel>(Image<TPixel> image) where TPixel : unmanaged, IPixel<TPixel>;
     }
 
@@ -29,21 +40,57 @@ namespace CodeReader {
         /// <returns></returns>
         public ScanResult Scan<TPixel>(Image<TPixel> image) where TPixel : unmanaged, IPixel<TPixel> {
             
-            Stopwatch sw = new Stopwatch();
-            sw.Start();
-            image.Mutate(x => x.Resize(300,0));
-            image.Mutate(x => x.Grayscale());
-            //image.Mutate(x => x.AdaptiveThreshold());
-            var binarizedImage = Commons.Binarize(image);
+            if (!ImageProcessor.TryGetRawData(out RawQRData codeData)) {
+                return new ScanResult() { Success = false };
+            }
 
-            sw.Stop();
-            Console.WriteLine($"time: {sw.Elapsed}");
-            binarizedImage.Save("../TestData/QRCodeTestOUTPUT.png");
-            binarizedImage.Dispose();
+            if (!QRCodeDecoder.TryGetFormatInfo(codeData, out ContentType dataType)) {
+                return new ScanResult() { Success = false };
+            }
+
+            if (!QRCodeDecoder.TryGetData(codeData, out object data)) {
+                return new ScanResult() { Success = false };
+            }
+
+
+            {
+                Stopwatch sw = new Stopwatch();
+                sw.Start();
+                image.Mutate(x => x.Resize(300,0));
+                image.Mutate(x => x.Grayscale());
+                //image.Mutate(x => x.AdaptiveThreshold());
+                var binarizedImage = Commons.Binarize(image);
+
+                sw.Stop();
+                Console.WriteLine($"time: {sw.Elapsed}");
+                binarizedImage.Save("../TestData/QRCodeTestOUTPUT.png");
+                binarizedImage.Dispose();
+                
+                //image.Save("../TestData/QRCodeTest1OUTPUT.png");
+            }
+
+
+            return new ScanResult() { Success = true, DataType = dataType, Data = data };
+
+
             
-            //image.Save("../TestData/QRCodeTest1OUTPUT.png");
+        }
 
-            return new ScanResult();
+        class QRCodeDecoder {
+            public static bool TryGetFormatInfo(RawQRData codeData, out ContentType dataType) {
+
+                // Dummy implementation
+                dataType = ContentType.Text;
+                return true;
+            }
+
+            public static bool TryGetData(RawQRData codeData, out object decodedData) {
+                
+
+                // Dummy implementation
+                decodedData = (object)"Hello World";
+                return true;
+            }
         }
 
 
@@ -51,9 +98,14 @@ namespace CodeReader {
         /// Class responsible for processing the input image.
         /// Primarily converts image data to raw 2D matrix data for better handeling.
         /// </summary>
-        class ImageProcessor {
+        static class ImageProcessor {
             
-
+            public static bool TryGetRawData(out RawQRData rawDataMatrix) {
+                
+                // Dummy implementation
+                rawDataMatrix = new RawQRData();
+                return true;
+            }
             
 
             /// <summary>
@@ -66,7 +118,5 @@ namespace CodeReader {
                 }
             }
         }
-
-        
     }
 }
