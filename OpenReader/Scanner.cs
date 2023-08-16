@@ -39,6 +39,7 @@ namespace CodeReader {
             sw.Stop();
             Console.WriteLine($"time: {sw.Elapsed}");
             binarizedImage.Save("../TestData/QRCodeTestOUTPUT.png");
+            binarizedImage.Dispose();
             
             //image.Save("../TestData/QRCodeTest1OUTPUT.png");
 

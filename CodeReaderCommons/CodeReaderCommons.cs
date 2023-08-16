@@ -61,20 +61,20 @@ namespace CodeReaderCommons {
                     thresholdT1Matrix[x - (windowSize / 2) + (kernelSize / 2), y - (windowSize / 2) + (kernelSize / 2)] = thresholdT1;
                 }
             }
-
+            paddedImage.Dispose();
             
-            // Second part of the algorithm. Calculate thresholdT2 and threshold image.
+            // Second part of the algorithm. Calculate thresholdT2 and binarize image.
             Memory<L8> pixelMemory;
             luminanceImage.DangerousTryGetSinglePixelMemory(out pixelMemory);
-            var pixelSpan = paddedPixelMemory.Span;
+            var pixelSpan = pixelMemory.Span;
 
             for (int y = 0; y < luminanceImage.Height; y++) {
                 for (int x = 0; x < luminanceImage.Width; x++) {
                     Single thresholdT2 = GetThresholdT2(x, y);
-                    // Get a reference to the pixel at position x
-                    var pixelValue = pixelSpan[(y * paddedImage.Width) + x].PackedValue;
+                    int index = (y * luminanceImage.Width) + x;
+                    var pixelValue = pixelSpan[index].PackedValue;
 
-                    pixelSpan[(y * paddedImage.Width) + x].PackedValue = (pixelValue >= thresholdT2) ? (byte)255 : (byte)0;
+                    pixelSpan[index].PackedValue = (pixelValue >= thresholdT2) ? (byte)255 : (byte)0;
                 }
             }
 
