@@ -82,6 +82,17 @@ namespace CodeReader {
         /// Primarily converts image data to raw 2D matrix data for better handeling.
         /// </summary>
         static class ImageProcessor {
+
+            struct PixelCoord {
+                public int XCoord;
+                public int YCoord;
+            }
+
+            struct QRFinderPatterns {
+                public PixelCoord TopLeftPatternCenter;
+                public PixelCoord TopRightPatternCenter;
+                public PixelCoord BottomLeftPatternCenter;
+            }
             
             public static bool TryGetRawData<TPixel>(Image<TPixel> image, out RawQRData? rawDataMatrix) 
                 where TPixel : unmanaged, IPixel<TPixel> {
@@ -98,13 +109,15 @@ namespace CodeReader {
                     }
                     
                     image.Mutate(x => x.Grayscale());
-                    
+
                     var binarizedImage = Commons.Binarize(image);
 
-                    if (!QRPatternFinder.TryGetFinderPatterns(binarizedImage)) {
+                    if (!QRPatternFinder.TryGetFinderPatterns(binarizedImage, out QRFinderPatterns finderPatterns)) {
                         rawDataMatrix = null;
                         return false;
                     }
+
+
 
                     sw.Stop();
                     Console.WriteLine($"time: {sw.Elapsed}");
@@ -130,7 +143,8 @@ namespace CodeReader {
                     int endIndex; 
                 }
 
-                public static bool TryGetFinderPatterns(Image<L8> image) {
+                public static bool TryGetFinderPatterns(Image<L8> image, out QRFinderPatterns patterns) {
+                    patterns = new QRFinderPatterns();
                     return true;
                 }
 
