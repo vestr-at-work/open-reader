@@ -83,19 +83,28 @@ namespace CodeReader {
         /// </summary>
         static class ImageProcessor {
             
-            public static bool TryGetRawData<TPixel>(Image<TPixel> image, out RawQRData rawDataMatrix) 
+            public static bool TryGetRawData<TPixel>(Image<TPixel> image, out RawQRData? rawDataMatrix) 
                 where TPixel : unmanaged, IPixel<TPixel> {
 
                 {
                     Stopwatch sw = new Stopwatch();
                     sw.Start();
 
-                    image.Mutate(x => x.Resize(300,0));
+                    if (image.Width > 300 && image.Width > image.Height) {
+                        image.Mutate(x => x.Resize(300, 0));
+                    }
+                    else if (image.Height > 300 && image.Height > image.Width) {
+                        image.Mutate(x => x.Resize(0, 300));
+                    }
+                    
                     image.Mutate(x => x.Grayscale());
                     //image.Mutate(x => x.AdaptiveThreshold());
                     var binarizedImage = Commons.Binarize(image);
 
-                    QRPatternFinder.TryGetFinderPatterns(binarizedImage);
+                    if (!QRPatternFinder.TryGetFinderPatterns(binarizedImage)) {
+                        rawDataMatrix = null;
+                        return false;
+                    }
 
                     sw.Stop();
                     Console.WriteLine($"time: {sw.Elapsed}");
