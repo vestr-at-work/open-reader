@@ -100,14 +100,20 @@ namespace CodeReader {
                 {
                     Stopwatch sw = new Stopwatch();
                     sw.Start();
-
+                    
+                    int newWidth = 0, newHeight = 0;
                     if (image.Width > 300 && image.Width > image.Height) {
-                        image.Mutate(x => x.Resize(300, 0));
+                        newWidth = 300;
+                    }
+                    else if (image.Height > 300 && image.Height > 1.7 * image.Width) {
+                        newHeight = 450;
                     }
                     else if (image.Height > 300 && image.Height > image.Width) {
-                        image.Mutate(x => x.Resize(0, 300));
+                        newHeight = 300;
                     }
                     
+                    //when one side is equal to 0 the side gets scaled to preserve the ratio of original image
+                    image.Mutate(x => x.Resize(newWidth, newHeight));
                     image.Mutate(x => x.Grayscale());
 
                     var binarizedImage = Commons.Binarize(image);
