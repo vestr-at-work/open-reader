@@ -190,7 +190,7 @@ namespace CodeReader {
                     // Default value just to make _column++ 0;
                     private int _column = -1;
                     private int _currentBlocStart;
-                    private bool? _currentBlocWhite;
+                    private bool? _currentBlocIsWhite;
 
                     public int TestGetMiddle() {
                         return (((ColorBloc)_blackBlocLeft!).startIndex + ((ColorBloc)_blackBlocRight!).endIndex) / 2;
@@ -199,12 +199,12 @@ namespace CodeReader {
                     public bool AddNextPixelWhite() {
                         _column++;
                         // If image row begins with white
-                        if (_blackBlocRight is null && _currentBlocWhite is null) {
+                        if (_blackBlocRight is null && _currentBlocIsWhite is null) {
                             _currentBlocStart = _column;
-                            _currentBlocWhite = true;
+                            _currentBlocIsWhite = true;
                             return false;
                         }
-                        if (_currentBlocWhite is true) {
+                        if (_currentBlocIsWhite is true) {
                             return false;
                         }
 
@@ -213,7 +213,7 @@ namespace CodeReader {
                         _blackBlocRight = new ColorBloc(_currentBlocStart, _column - 1);
 
                         _currentBlocStart = _column;
-                        _currentBlocWhite = true;
+                        _currentBlocIsWhite = true;
 
                         return IsBlocRatioCorrect();
                     }
@@ -221,12 +221,12 @@ namespace CodeReader {
                     public void AddNextPixelBlack() {
                         _column++;
                         // If image row begins with black
-                        if (_whiteBlocRight is null && _currentBlocWhite is null) {
+                        if (_whiteBlocRight is null && _currentBlocIsWhite is null) {
                             _currentBlocStart = _column;
-                            _currentBlocWhite = false;
+                            _currentBlocIsWhite = false;
                             return;
                         }
-                        if (_currentBlocWhite is false) {
+                        if (_currentBlocIsWhite is false) {
                             return;
                         }
 
@@ -234,18 +234,20 @@ namespace CodeReader {
                         _whiteBlocRight = new ColorBloc(_currentBlocStart, _column - 1);
 
                         _currentBlocStart = _column;
-                        _currentBlocWhite = false;
+                        _currentBlocIsWhite = false;
                     }
 
                     private bool IsBlocRatioCorrect() {
                         const float smallBlocRatio = 1/7f;
                         const float bigBlocRatio = 3/7f;
+                        float errorMargin = (smallBlocRatio / 100f) * 15;
 
                         if (_blackBlocLeft is null || _whiteBlocLeft is null || 
                             _blackBlocMiddle is null || _whiteBlocRight is null || _blackBlocRight is null) {
                             return false;
                         }
 
+                        // TODO Can this be done better?
                         for (int i = -1; i <= 1; i++) {
                             for (int j = -1; j <= 1; j++) {
                                 for (int k = -1; k <= 1; k++) {
@@ -264,8 +266,6 @@ namespace CodeReader {
                                                                  whiteBlocRightLength +
                                                                  blackBlocRightLength;
 
-                                            float errorMargin = (allBlocsLength / 100f) * 2;
-                                            
                                             float blackBlocLeftRatio = blackBlocLeftLength / allBlocsLength;
                                             if (BlocRatioOutsideErrorMargin(blackBlocLeftRatio, smallBlocRatio, errorMargin)) {
                                                 continue;
