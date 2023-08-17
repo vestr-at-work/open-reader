@@ -12,11 +12,9 @@ namespace CodeReaderCommons {
         /// described in this paper: https://www.researchgate.net/publication/275467941_2D_Barcode_Image_Decoding
         /// </summary>
         /// <param name="image">Grayscale source image.</param>
+        /// <param name="windowSize">Size of the sampling window in local tresholding.</param>
         /// <returns>Binarized source image.</returns>
-        public static Image<L8> Binarize<TPixel>(Image<TPixel> image) where TPixel : unmanaged, IPixel<TPixel> {
-            
-            //Possibly should be input parameter 
-            const int windowSize = 25;
+        public static Image<L8> Binarize<TPixel>(Image<TPixel> image, int windowSize) where TPixel : unmanaged, IPixel<TPixel> {
             //Lenght of the step when iterating over sample window (sampling done for perforamance reasons)
             const int sampleStep = 6;    
             int[,] convolutionKernel = new int[,] {{1, 1, 1}, {1, 2, 1}, {1, 1, 1}};
@@ -91,6 +89,12 @@ namespace CodeReaderCommons {
                 }
                 return convolutionSum / kernelValuesSum;
             }
+        }
+
+        public static Image<L8> Binarize<TPixel>(Image<TPixel> image) 
+            where TPixel : unmanaged, IPixel<TPixel> {
+
+            return Binarize(image, 25);
         }
         
 

@@ -98,7 +98,7 @@ namespace CodeReader {
                     }
                     
                     image.Mutate(x => x.Grayscale());
-                    //image.Mutate(x => x.AdaptiveThreshold());
+                    
                     var binarizedImage = Commons.Binarize(image);
 
                     if (!QRPatternFinder.TryGetFinderPatterns(binarizedImage)) {
