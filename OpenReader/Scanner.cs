@@ -138,12 +138,11 @@ namespace CodeReader {
             /// Class for finding and recognizing QR code patterns.
             /// </summary>
             static class QRPatternFinder {
-                private struct ColorBlock {
-                    int startIndex;
-                    int endIndex; 
-                }
+                
 
                 public static bool TryGetFinderPatterns(Image<L8> image, out QRFinderPatterns patterns) {
+                    List<PixelCoord> potentialFinderPatterns = GetPotentialFinderPatternCoords(image);
+
                     patterns = new QRFinderPatterns();
                     return true;
                 }
@@ -152,7 +151,26 @@ namespace CodeReader {
                     return true;
                 }
 
+                private struct ColorBlock {
+                    int startIndex;
+                    int endIndex; 
+                }
 
+                private static List<PixelCoord> GetPotentialFinderPatternCoords(Image<L8> image) {
+                    Memory<L8> pixelMemory;
+                    image.DangerousTryGetSinglePixelMemory(out pixelMemory);
+                    var pixelSpan = pixelMemory.Span;
+
+                    for (int y = 0; y < image.Height; y++) {
+                        for (int x = 0; x < image.Width; x++) {
+                            int index = (y * image.Width) + x;
+                            var pixelValue = pixelSpan[index].PackedValue;
+
+                        }
+                    }
+
+                    return new List<PixelCoord>();
+                }
             }
         }
     }
