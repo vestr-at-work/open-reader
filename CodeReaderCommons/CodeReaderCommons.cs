@@ -22,7 +22,7 @@ namespace CodeReaderCommons {
             const int kernelValuesSum = 10;
             
             //The "+((kernelSize / 2) * 2)" is there to avoid bound checks when convolving with kernel
-            Single[,] thresholdT1Matrix = new Single[image.Width + ((kernelSize / 2) * 2), image.Height + ((kernelSize / 2) * 2)];
+            float[,] thresholdT1Matrix = new float[image.Width + ((kernelSize / 2) * 2), image.Height + ((kernelSize / 2) * 2)];
             Image<L8> luminanceImage = image.CloneAs<L8>();
             //Padded image to avoid bound checks
             Image<L8> paddedImage = GetPaddedImage(luminanceImage, windowSize / 2);
@@ -68,7 +68,7 @@ namespace CodeReaderCommons {
 
             for (int y = 0; y < luminanceImage.Height; y++) {
                 for (int x = 0; x < luminanceImage.Width; x++) {
-                    Single thresholdT2 = GetThresholdT2(x, y);
+                    float thresholdT2 = GetThresholdT2(x, y);
                     int index = (y * luminanceImage.Width) + x;
                     var pixelValue = pixelSpan[index].PackedValue;
 
@@ -80,8 +80,8 @@ namespace CodeReaderCommons {
 
 
 
-            Single GetThresholdT2(int x, int y) {
-                Single convolutionSum = 0;
+            float GetThresholdT2(int x, int y) {
+                float convolutionSum = 0;
                 for (int j = -(kernelSize / 2); j <= (kernelSize / 2); j++) {
                     for (int i = -(kernelSize / 2); i <= (kernelSize / 2); i++) {
                         convolutionSum += convolutionKernel[(kernelSize / 2) + i, (kernelSize / 2) + j] * thresholdT1Matrix[x + i + 1, y + j + 1];
