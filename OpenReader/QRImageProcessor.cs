@@ -176,60 +176,46 @@ namespace CodeReader {
                 private bool IsBlocRatioCorrect() {
                     const float smallBlocRatio = 1/7f;
                     const float bigBlocRatio = 3/7f;
-                    float errorMargin = (smallBlocRatio / 100f) * 15;
+                    float errorMarginSmall = (smallBlocRatio / 100f) * 30;
+                    float errorMarginBig = (bigBlocRatio / 100f) * 30;
 
                     if (_blackBlocLeft is null || _whiteBlocLeft is null || 
                         _blackBlocMiddle is null || _whiteBlocRight is null || _blackBlocRight is null) {
                         return false;
                     }
 
-                    // TODO Can this be done better?
-                    for (int i = -1; i <= 1; i++) {
-                        for (int j = -1; j <= 1; j++) {
-                            for (int k = -1; k <= 1; k++) {
-                                for (int l = -1; l <= 1; l++) {
-                                    for (int m = -1; m <= 1; m++) {
-                                        
-                                        int blackBlocLeftLength = ((ColorBloc)_blackBlocLeft!).Length + i;
-                                        int whiteBlocLeftLength = ((ColorBloc)_whiteBlocLeft!).Length + j;
-                                        int blackBlocMiddleLength = ((ColorBloc)_blackBlocMiddle!).Length + k;
-                                        int whiteBlocRightLength = ((ColorBloc)_whiteBlocRight!).Length + l;
-                                        int blackBlocRightLength = ((ColorBloc)_blackBlocRight!).Length + m;
+                    int blackBlocLeftLength = ((ColorBloc)_blackBlocLeft!).Length;
+                    int whiteBlocLeftLength = ((ColorBloc)_whiteBlocLeft!).Length;
+                    int blackBlocMiddleLength = ((ColorBloc)_blackBlocMiddle!).Length;
+                    int whiteBlocRightLength = ((ColorBloc)_whiteBlocRight!).Length;
+                    int blackBlocRightLength = ((ColorBloc)_blackBlocRight!).Length;
 
-                                        float allBlocsLength = blackBlocLeftLength + 
-                                                                whiteBlocLeftLength +
-                                                                blackBlocMiddleLength +
-                                                                whiteBlocRightLength +
-                                                                blackBlocRightLength;
+                    float allBlocsLength = blackBlocLeftLength + whiteBlocLeftLength + 
+                                            blackBlocMiddleLength + whiteBlocRightLength + 
+                                            blackBlocRightLength;
 
-                                        float blackBlocLeftRatio = blackBlocLeftLength / allBlocsLength;
-                                        if (BlocRatioOutsideErrorMargin(blackBlocLeftRatio, smallBlocRatio, errorMargin)) {
-                                            continue;
-                                        }
-                                        float whiteBlocLeftRatio = whiteBlocLeftLength / allBlocsLength;
-                                        if (BlocRatioOutsideErrorMargin(whiteBlocLeftRatio, desiredBlocRatio: smallBlocRatio, errorMargin)) {
-                                            continue;
-                                        }
-                                        float blackBlocMiddleRatio = blackBlocMiddleLength / allBlocsLength;
-                                        if (BlocRatioOutsideErrorMargin(blackBlocMiddleRatio, desiredBlocRatio: bigBlocRatio, errorMargin)) {
-                                            continue;
-                                        }
-                                        float whiteBlocRightRatio = whiteBlocRightLength / allBlocsLength;
-                                        if (BlocRatioOutsideErrorMargin(whiteBlocRightRatio, desiredBlocRatio: smallBlocRatio, errorMargin)) {
-                                            continue;
-                                        }
-                                        float blackBlocRightRatio = blackBlocRightLength / allBlocsLength;
-                                        if (BlocRatioOutsideErrorMargin(blackBlocRightRatio, desiredBlocRatio: smallBlocRatio, errorMargin)) {
-                                            continue;
-                                        }
-
-                                        return true;
-                                    }
-                                }
-                            }
-                        }
+                    float blackBlocLeftRatio = blackBlocLeftLength / allBlocsLength;
+                    if (BlocRatioOutsideErrorMargin(blackBlocLeftRatio, smallBlocRatio, errorMarginSmall)) {
+                        return false;
                     }
-                    return false;
+                    float whiteBlocLeftRatio = whiteBlocLeftLength / allBlocsLength;
+                    if (BlocRatioOutsideErrorMargin(whiteBlocLeftRatio, desiredBlocRatio: smallBlocRatio, errorMarginSmall)) {
+                        return false;
+                    }
+                    float blackBlocMiddleRatio = blackBlocMiddleLength / allBlocsLength;
+                    if (BlocRatioOutsideErrorMargin(blackBlocMiddleRatio, desiredBlocRatio: bigBlocRatio, errorMarginBig)) {
+                        return false;
+                    }
+                    float whiteBlocRightRatio = whiteBlocRightLength / allBlocsLength;
+                    if (BlocRatioOutsideErrorMargin(whiteBlocRightRatio, desiredBlocRatio: smallBlocRatio, errorMarginSmall)) {
+                        return false;
+                    }
+                    float blackBlocRightRatio = blackBlocRightLength / allBlocsLength;
+                    if (BlocRatioOutsideErrorMargin(blackBlocRightRatio, desiredBlocRatio: smallBlocRatio, errorMarginSmall)) {
+                        return false;
+                    }
+
+                    return true;
                 }
 
                 bool BlocRatioOutsideErrorMargin(float blocRatio, float desiredBlocRatio, float errorMargin) {
