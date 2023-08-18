@@ -66,9 +66,8 @@ namespace CodeReader {
         /// Class for finding and recognizing QR code patterns.
         /// </summary>
         static class QRPatternFinder {
-            
-
             public static bool TryGetFinderPatterns(Image<L8> image, out QRFinderPatterns patterns) {
+
                 List<PixelCoord> potentialFinderPatterns = GetPotentialFinderPatternCoords(image);
 
                 patterns = new QRFinderPatterns();
@@ -103,6 +102,8 @@ namespace CodeReader {
                     _row = row;
                 }
 
+                public bool IsPossibleFinderPattern = false;
+
                 private ColorBloc? _blackBlocLeft;
                 private ColorBloc? _whiteBlocLeft;
                 private ColorBloc? _blackBlocMiddle;
@@ -119,17 +120,28 @@ namespace CodeReader {
                     return (((ColorBloc)_blackBlocLeft!).startIndex + ((ColorBloc)_blackBlocRight!).endIndex) / 2;
                 }
 
+                public void AddNextRowPixel(byte pixelValue) {
+                    IsPossibleFinderPattern = false;
+                    if (pixelValue == (byte)255) {
+                        AddNextPixelWhite();
+                        IsPossibleFinderPattern = IsBlocRatioCorrect();
+                    }
+                    else {
+                        AddNextPixelBlack();
+                    }
+                }
+
                 // TODO ADD BETTER INTERFACE OR METHOD NAME. implicit bool is sus
-                public bool AddNextPixelWhite() {
+                private void AddNextPixelWhite() {
                     _column++;
                     // If image row begins with white
                     if (_blackBlocRight is null && _currentBlocIsWhite is null) {
                         _currentBlocStart = _column;
                         _currentBlocIsWhite = true;
-                        return false;
+                        return;
                     }
                     if (_currentBlocIsWhite is true) {
-                        return false;
+                        return;
                     }
 
                     _blackBlocLeft = _blackBlocMiddle;
@@ -139,10 +151,10 @@ namespace CodeReader {
                     _currentBlocStart = _column;
                     _currentBlocIsWhite = true;
 
-                    return IsBlocRatioCorrect();
+                    return;
                 }
 
-                public void AddNextPixelBlack() {
+                private void AddNextPixelBlack() {
                     _column++;
                     // If image row begins with black
                     if (_whiteBlocRight is null && _currentBlocIsWhite is null) {
@@ -237,14 +249,13 @@ namespace CodeReader {
                         int index = (y * image.Width) + x;
                         var pixelValue = pixelSpan[index].PackedValue;
 
-                        if (pixelValue == (byte)255) {
-                            if (finderExtractor.AddNextPixelWhite()) {
-                                pixelSpan[(y * image.Width) + finderExtractor.TestGetMiddle()].PackedValue = 127;
-                            }
+                        finderExtractor.AddNextRowPixel(pixelValue);
+
+                        if (!finderExtractor.IsPossibleFinderPattern) {
+                            continue;
                         }
-                        else {
-                            finderExtractor.AddNextPixelBlack();
-                        }
+
+                        pixelSpan[(y * image.Width) + finderExtractor.TestGetMiddle()].PackedValue = 127;
                     }
                 }
 
