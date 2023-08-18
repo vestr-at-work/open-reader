@@ -103,6 +103,9 @@ namespace CodeReader {
                 }
 
                 public bool IsPossibleFinderPattern = false;
+                public bool IsFinderPattern = false;
+                public bool NeedNextUpPixelVertical = true;
+                public bool NeedNextDownPixelVertical = true;
 
                 private ColorBloc? _blackBlocLeft;
                 private ColorBloc? _whiteBlocLeft;
@@ -110,11 +113,16 @@ namespace CodeReader {
                 private ColorBloc? _whiteBlocRight;
                 private ColorBloc? _blackBlocRight;
 
+                // Finder pattern column blocks ordered from top to bottom
+                private ColorBloc?[] _columnBlocs = new ColorBloc?[5];
+                private bool _currentColumnBlocIsWhite = false;
+                private int _currentColumnBlocStart;
+
                 private int _row;
                 // Default value just to make _column++ 0;
                 private int _column = -1;
-                private int _currentBlocStart;
-                private bool? _currentBlocIsWhite;
+                private int _currentRowBlocStart;
+                private bool? _currentRowBlocIsWhite;
 
                 public int TestGetMiddle() {
                     return (((ColorBloc)_blackBlocLeft!).startIndex + ((ColorBloc)_blackBlocRight!).endIndex) / 2;
@@ -125,31 +133,30 @@ namespace CodeReader {
                     if (pixelValue == (byte)255) {
                         AddNextPixelWhite();
                         IsPossibleFinderPattern = IsBlocRatioCorrect();
+                        return;
                     }
-                    else {
-                        AddNextPixelBlack();
-                    }
+
+                    AddNextPixelBlack();
                 }
 
-                // TODO ADD BETTER INTERFACE OR METHOD NAME. implicit bool is sus
                 private void AddNextPixelWhite() {
                     _column++;
                     // If image row begins with white
-                    if (_blackBlocRight is null && _currentBlocIsWhite is null) {
-                        _currentBlocStart = _column;
-                        _currentBlocIsWhite = true;
+                    if (_blackBlocRight is null && _currentRowBlocIsWhite is null) {
+                        _currentRowBlocStart = _column;
+                        _currentRowBlocIsWhite = true;
                         return;
                     }
-                    if (_currentBlocIsWhite is true) {
+                    if (_currentRowBlocIsWhite is true) {
                         return;
                     }
 
                     _blackBlocLeft = _blackBlocMiddle;
                     _blackBlocMiddle = _blackBlocRight;
-                    _blackBlocRight = new ColorBloc(_currentBlocStart, _column - 1);
+                    _blackBlocRight = new ColorBloc(_currentRowBlocStart, _column - 1);
 
-                    _currentBlocStart = _column;
-                    _currentBlocIsWhite = true;
+                    _currentRowBlocStart = _column;
+                    _currentRowBlocIsWhite = true;
 
                     return;
                 }
@@ -157,20 +164,81 @@ namespace CodeReader {
                 private void AddNextPixelBlack() {
                     _column++;
                     // If image row begins with black
-                    if (_whiteBlocRight is null && _currentBlocIsWhite is null) {
-                        _currentBlocStart = _column;
-                        _currentBlocIsWhite = false;
+                    if (_whiteBlocRight is null && _currentRowBlocIsWhite is null) {
+                        _currentRowBlocStart = _column;
+                        _currentRowBlocIsWhite = false;
                         return;
                     }
-                    if (_currentBlocIsWhite is false) {
+                    if (_currentRowBlocIsWhite is false) {
                         return;
                     }
 
                     _whiteBlocLeft = _whiteBlocRight;
-                    _whiteBlocRight = new ColorBloc(_currentBlocStart, _column - 1);
+                    _whiteBlocRight = new ColorBloc(_currentRowBlocStart, _column - 1);
 
-                    _currentBlocStart = _column;
-                    _currentBlocIsWhite = false;
+                    _currentRowBlocStart = _column;
+                    _currentRowBlocIsWhite = false;
+                }
+
+                public void AddNextColumnPixelUp(byte pixelValue, int row) {
+                    if (pixelValue == (byte)255) {
+                        AddNextColumnPixelUpWhite(row);
+                        return;
+                    }
+                    AddNextColumnPixelUpBlack(row);
+                }
+
+                private void AddNextColumnPixelUpBlack(int row) {
+                    // Top white bloc
+                    if (_columnBlocs[1] is null && !_currentColumnBlocIsWhite) {
+                        return;
+                    }
+                    if (!_currentColumnBlocIsWhite) {
+                        return;
+                    }
+
+                    // Set top white bloc
+                    _columnBlocs[1] = new ColorBloc(_currentColumnBlocStart, row - 1);
+
+                    _currentColumnBlocStart = row;
+                    _currentColumnBlocIsWhite = false;
+                }
+
+                private void AddNextColumnPixelUpWhite(int row) {
+                    // Middle black bloc
+                    if (_columnBlocs[2] is not null && _currentColumnBlocIsWhite) {
+                        return;
+                    }
+                    if (_columnBlocs[2] is null) {
+                        int invalid = Int32.MinValue;
+                        _columnBlocs[2] = new ColorBloc(invalid, row - 1);
+
+                        _currentColumnBlocStart = row;
+                        _currentColumnBlocIsWhite = true;
+                        return;
+                    }
+
+                    // Finish off top black bloc
+                    _columnBlocs[0] = new ColorBloc(_currentColumnBlocStart, row - 1);
+
+                }
+
+                public void AddNextColumnPixelDown(byte pixelValue, int row) {
+                    // DONT FORGET TO RESET STATE VALUES AFTER COLUMN UP METHODS!!!!
+
+                    if (pixelValue == (byte)255) {
+                        AddNextColumnPixelDownWhite(row);
+                        return;
+                    }
+                    AddNextColumnPixelDownBlack(row);
+                }
+
+                private void AddNextColumnPixelDownBlack(int row) {
+
+                }
+
+                private void AddNextColumnPixelDownWhite(int row) {
+                    
                 }
 
                 private bool IsBlocRatioCorrect() {
@@ -241,7 +309,32 @@ namespace CodeReader {
                             continue;
                         }
 
-                        pixelSpan[(y * image.Width) + finderExtractor.TestGetMiddle()].PackedValue = 127;
+
+                        // Check vertical
+                        int centerOfMiddleBloc = finderExtractor.TestGetMiddle();
+                        int checkVerticalY = y;
+                        // Check blocs up
+                        while (checkVerticalY >= 0 && finderExtractor.NeedNextUpPixelVertical) {
+                            checkVerticalY--;
+                            index = (checkVerticalY * image.Width) + centerOfMiddleBloc;
+                            pixelValue = pixelSpan[index].PackedValue;
+
+                            finderExtractor.AddNextColumnPixelUp(pixelValue, checkVerticalY);
+                        }
+                        checkVerticalY = y;
+                        // Check blocs down
+                        while (checkVerticalY < image.Height && finderExtractor.NeedNextDownPixelVertical) {
+                            checkVerticalY++;
+                            index = (checkVerticalY * image.Width) + centerOfMiddleBloc;
+                            pixelValue = pixelSpan[index].PackedValue;
+
+                            finderExtractor.AddNextColumnPixelDown(pixelValue, checkVerticalY);
+                        }
+
+                        if (finderExtractor.IsFinderPattern) {
+                            pixelSpan[(y * image.Width) + centerOfMiddleBloc].PackedValue = 127;
+                        }
+                        
                     }
                 }
 
