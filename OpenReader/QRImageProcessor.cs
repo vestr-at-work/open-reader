@@ -20,9 +20,20 @@ namespace CodeReader {
         }
 
         struct QRFinderPatterns {
-            public PixelCoord TopLeftPatternCenter;
-            public PixelCoord TopRightPatternCenter;
-            public PixelCoord BottomLeftPatternCenter;
+            public QRFinderPattern TopLeftPattern;
+            public QRFinderPattern TopRightPattern;
+            public QRFinderPattern BottomLeftPattern;
+        }
+
+        struct QRFinderPattern {
+            public QRFinderPattern(PixelCoord centroid, int width, int height) {
+                Centroid = centroid;
+                Width = width;
+                Height = height;
+            }
+            public PixelCoord Centroid;
+            public int Width;
+            public int Height;
         }
         
         public static bool TryGetRawData<TPixel>(Image<TPixel> image, out RawQRData? rawDataMatrix) 
@@ -75,9 +86,14 @@ namespace CodeReader {
         static class QRPatternFinder {
             public static bool TryGetFinderPatterns(Image<L8> image, out QRFinderPatterns patterns) {
 
-                List<PixelCoord> potentialFinderPatterns = GetPotentialFinderPatternCoords(image);
-                foreach (var pixel in potentialFinderPatterns) {
-                    Console.WriteLine($"x: {pixel.XCoord}, y: {pixel.YCoord}");
+                List<QRFinderPattern> potentialFinderPatterns = GetPotentialFinderPatternCoords(image);
+
+                foreach (var pattern in potentialFinderPatterns) {
+                    Console.WriteLine($"x: {pattern.Centroid.XCoord}, y: {pattern.Centroid.YCoord}");
+                }
+
+                if (potentialFinderPatterns.Count > 3) {
+
                 }
 
                 patterns = new QRFinderPatterns();
@@ -139,6 +155,14 @@ namespace CodeReader {
                     LastWhite = 3,
                     LastBlack = 4
 
+                }
+
+                public int GetPatternWidth() {
+                    return (((ColorBloc)_rowBlocs[(int)Bloc.LastBlack]!).EndIndex - ((ColorBloc)_rowBlocs[(int)Bloc.FirstBlack]!).StartIndex);
+                }
+
+                public int GetPatternHeight() {
+                    return (((ColorBloc)_columnBlocs[(int)Bloc.LastBlack]!).EndIndex - ((ColorBloc)_columnBlocs[(int)Bloc.FirstBlack]!).StartIndex);
                 }
 
                 public int GetMiddleOfRowBlocs() {
@@ -357,8 +381,8 @@ namespace CodeReader {
 
             
 
-            private static List<PixelCoord> GetPotentialFinderPatternCoords(Image<L8> image) {
-                List<PixelCoord> finderPatternPixels = new List<PixelCoord>();
+            private static List<QRFinderPattern> GetPotentialFinderPatternCoords(Image<L8> image) {
+                List<QRFinderPattern> finderPatternPixels = new List<QRFinderPattern>();
 
                 Memory<L8> pixelMemory;
                 image.DangerousTryGetSinglePixelMemory(out pixelMemory);
@@ -398,13 +422,12 @@ namespace CodeReader {
                             finderExtractor.AddNextColumnPixelDown(pixelValue, checkVerticalY);
                         }
 
-                        if (finderExtractor.IsPossibleFinderPattern) {
-                            //pixelSpan[(y * image.Width) + centerOfMiddleBloc].PackedValue = 100;
-                        }
                         if (finderExtractor.IsFinderPattern) {
                             pixelSpan[(finderExtractor.GetMiddleOfColumnBlocs() * image.Width) + centerOfMiddleBloc].PackedValue = 200;
 
-                            finderPatternPixels.Add(new PixelCoord(centerOfMiddleBloc, finderExtractor.GetMiddleOfColumnBlocs()));
+                            var centroid = new PixelCoord(centerOfMiddleBloc, finderExtractor.GetMiddleOfColumnBlocs());
+                            var pattern = new QRFinderPattern(centroid, finderExtractor.GetPatternWidth(), finderExtractor.GetPatternHeight());
+                            finderPatternPixels.Add(pattern);
                         }
                         
                     }
