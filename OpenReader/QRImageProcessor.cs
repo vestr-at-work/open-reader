@@ -141,9 +141,16 @@ namespace CodeReader {
 
                 }
 
-
-                public int TestGetMiddle() {
+                public int GetMiddleOfRowBlocs() {
                     return (((ColorBloc)_rowBlocs[(int)Bloc.FirstBlack]!).StartIndex + ((ColorBloc)_rowBlocs[(int)Bloc.LastBlack]!).EndIndex) / 2;
+                }
+
+                /// <summary>
+                /// Gets middle 'y' coordinate of column blocs. Call only if IsFinderPattern = true!
+                /// </summary>
+                /// <returns>Middle 'y' coordinate of column blocs.</returns>
+                public int GetMiddleOfColumnBlocs() {
+                    return (((ColorBloc)_columnBlocs[(int)Bloc.FirstBlack]!).StartIndex + ((ColorBloc)_columnBlocs[(int)Bloc.LastBlack]!).EndIndex) / 2;
                 }
 
                 public void AddNextRowPixel(byte pixelValue, int column) {
@@ -371,7 +378,7 @@ namespace CodeReader {
 
 
                         // Check vertical
-                        int centerOfMiddleBloc = finderExtractor.TestGetMiddle();
+                        int centerOfMiddleBloc = finderExtractor.GetMiddleOfRowBlocs();
                         int checkVerticalY = y;
                         // Check blocs up
                         while (checkVerticalY > 0 && finderExtractor.NeedNextUpPixelVertical) {
@@ -392,12 +399,12 @@ namespace CodeReader {
                         }
 
                         if (finderExtractor.IsPossibleFinderPattern) {
-                            pixelSpan[(y * image.Width) + centerOfMiddleBloc].PackedValue = 100;
+                            //pixelSpan[(y * image.Width) + centerOfMiddleBloc].PackedValue = 100;
                         }
                         if (finderExtractor.IsFinderPattern) {
-                            pixelSpan[(y * image.Width) + centerOfMiddleBloc].PackedValue = 200;
+                            pixelSpan[(finderExtractor.GetMiddleOfColumnBlocs() * image.Width) + centerOfMiddleBloc].PackedValue = 200;
 
-                            finderPatternPixels.Add(new PixelCoord(centerOfMiddleBloc, y));
+                            finderPatternPixels.Add(new PixelCoord(centerOfMiddleBloc, finderExtractor.GetMiddleOfColumnBlocs()));
                         }
                         
                     }
