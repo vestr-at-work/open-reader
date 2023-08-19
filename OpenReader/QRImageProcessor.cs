@@ -10,6 +10,11 @@ namespace CodeReader {
     static class QRImageProcessor {
 
         struct PixelCoord {
+            public PixelCoord(int x, int y) {
+                XCoord = x;
+                YCoord = y;
+            }
+
             public int XCoord;
             public int YCoord;
         }
@@ -47,6 +52,8 @@ namespace CodeReader {
                 return false;
             }
 
+
+
             sw.Stop();
             Console.WriteLine($"time: {sw.Elapsed}");
 
@@ -69,9 +76,12 @@ namespace CodeReader {
             public static bool TryGetFinderPatterns(Image<L8> image, out QRFinderPatterns patterns) {
 
                 List<PixelCoord> potentialFinderPatterns = GetPotentialFinderPatternCoords(image);
+                foreach (var pixel in potentialFinderPatterns) {
+                    Console.WriteLine($"x: {pixel.XCoord}, y: {pixel.YCoord}");
+                }
 
                 patterns = new QRFinderPatterns();
-                return true;
+                return potentialFinderPatterns.Count != 0;
             }
 
             public static bool TryGetAlignmentPatterns(Image<L8> image) {
@@ -87,7 +97,7 @@ namespace CodeReader {
                 public int EndIndex; 
 
                 public int Length { 
-                    get => (EndIndex - StartIndex) + 1;
+                    get => Math.Abs((EndIndex - StartIndex) + 1);
                 }
             }
 
@@ -341,6 +351,8 @@ namespace CodeReader {
             
 
             private static List<PixelCoord> GetPotentialFinderPatternCoords(Image<L8> image) {
+                List<PixelCoord> finderPatternPixels = new List<PixelCoord>();
+
                 Memory<L8> pixelMemory;
                 image.DangerousTryGetSinglePixelMemory(out pixelMemory);
                 var pixelSpan = pixelMemory.Span;
@@ -384,12 +396,14 @@ namespace CodeReader {
                         }
                         if (finderExtractor.IsFinderPattern) {
                             pixelSpan[(y * image.Width) + centerOfMiddleBloc].PackedValue = 200;
+
+                            finderPatternPixels.Add(new PixelCoord(centerOfMiddleBloc, y));
                         }
                         
                     }
                 }
 
-                return new List<PixelCoord>();
+                return finderPatternPixels;
             }
         }
     }
