@@ -311,14 +311,14 @@ namespace CodeReader {
                 }
 
                 private void DisposeColumnInfo() {
-                    Console.WriteLine("---");
+                    // Console.WriteLine("---");
 
-                    foreach (var bloc in _columnBlocs) {
-                        if (bloc is not null) 
-                            Console.WriteLine($"{((ColorBloc)bloc!).StartIndex}, {((ColorBloc)bloc!).EndIndex}");
-                        else 
-                            Console.WriteLine("-");
-                    }
+                    // foreach (var bloc in _columnBlocs) {
+                    //     if (bloc is not null) 
+                    //         Console.WriteLine($"{((ColorBloc)bloc!).StartIndex}, {((ColorBloc)bloc!).EndIndex}");
+                    //     else 
+                    //         Console.WriteLine("-");
+                    // }
                     IsFinderPattern = false;
                     _columnBlocs = new ColorBloc?[5];
                     _currentColumnBlocUpIsWhite = false;
