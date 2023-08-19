@@ -17,6 +17,11 @@ namespace CodeReader {
 
             public int XCoord;
             public int YCoord;
+
+            public int DistanceFrom(PixelCoord other) {
+                return (int)Math.Sqrt(Math.Pow(this.XCoord - other.XCoord, 2) 
+                            + Math.Pow(this.YCoord - other.YCoord, 2));
+            }
         }
 
         struct QRFinderPatterns {
@@ -92,6 +97,8 @@ namespace CodeReader {
                 foreach (var pattern in potentialFinderPatterns) {
                     Console.WriteLine($"x: {pattern.Centroid.XCoord}, y: {pattern.Centroid.YCoord}");
                 }
+                Console.WriteLine("-----");
+
 
                 if (potentialFinderPatterns.Count < 3) {
                     // Empty assingment
@@ -100,6 +107,10 @@ namespace CodeReader {
                 }
 
                 var finderPatterns = FilterFinderPatterns(potentialFinderPatterns);
+
+                foreach (var pattern in finderPatterns) {
+                    Console.WriteLine($"x: {pattern.Centroid.XCoord}, y: {pattern.Centroid.YCoord}");
+                }
 
                 patterns = DetermineFinderPatternPosition(finderPatterns);
                 return true;
@@ -441,14 +452,66 @@ namespace CodeReader {
             }
 
             private static List<QRFinderPattern> FilterFinderPatterns(List<QRFinderPattern> patterns) {
+                var clusters = GetClustersBasedOnDistance(patterns, 5);
+                return GetThreeAvgPatternsFromMostPopulusClusters(clusters);
+            }
 
-                return new List<QRFinderPattern>();
+            private static List<List<QRFinderPattern>> GetClustersBasedOnDistance(List<QRFinderPattern> patterns, int distanceThreshold) {
+                List<List<QRFinderPattern>> clusters = new List<List<QRFinderPattern>>();
+                foreach (var pattern in patterns) {
+                    if (clusters.Count == 0) {
+                        clusters.Add(new List<QRFinderPattern>() { pattern });
+                        continue;
+                    }
+                    bool gotAdded = false;
+                    foreach (var cluster in clusters) {
+                        if (pattern.Centroid.DistanceFrom(cluster[0].Centroid) <= distanceThreshold) {
+                            cluster.Add(pattern);
+                            gotAdded = true;
+                            break;
+                        }
+                    }
+                    if (!gotAdded) {
+                        clusters.Add(new List<QRFinderPattern>() { pattern });
+                    }
+                }
+                return clusters;
+            }
+
+            private static List<QRFinderPattern> GetThreeAvgPatternsFromMostPopulusClusters(List<List<QRFinderPattern>> clusters) {
+                // Sort in descending order based on number of patterns in cluster
+                clusters.Sort(delegate(List<QRFinderPattern> clusterA, List<QRFinderPattern> clusterB) {
+                    return clusterB.Count.CompareTo(clusterA.Count);
+                });
+
+                var finalThreeFinderPatterns = new List<QRFinderPattern>();
+                for (int i = 0; i < 3; i++) {
+                    int count = 0;
+                    int sumX = 0;
+                    int sumY = 0;
+                    int sumWidth = 0;
+                    int sumHeight = 0;
+                    foreach (var pattern in clusters[i]) {
+                        count++;
+                        sumX += pattern.Centroid.XCoord;
+                        sumY += pattern.Centroid.YCoord;
+                        sumWidth += pattern.Width;
+                        sumHeight += pattern.Height;
+                    }
+
+                    var averageCentroid = new PixelCoord(sumX / count, sumY / count);
+                    var clusterAveragePattern = new QRFinderPattern(averageCentroid, sumWidth / count, sumHeight / count);
+                    finalThreeFinderPatterns.Add(clusterAveragePattern);   
+                }
+
+                return finalThreeFinderPatterns;
             }
 
             private static QRFinderPatterns DetermineFinderPatternPosition(List<QRFinderPattern> patterns) {
 
                 return new QRFinderPatterns();
             }
+
         }
     }
 }
