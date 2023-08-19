@@ -86,19 +86,25 @@ namespace CodeReader {
         static class QRPatternFinder {
             public static bool TryGetFinderPatterns(Image<L8> image, out QRFinderPatterns patterns) {
 
-                List<QRFinderPattern> potentialFinderPatterns = GetPotentialFinderPatternCoords(image);
+                List<QRFinderPattern> potentialFinderPatterns = GetPotentialFinderPattern(image);
 
+                // Debug print
                 foreach (var pattern in potentialFinderPatterns) {
                     Console.WriteLine($"x: {pattern.Centroid.XCoord}, y: {pattern.Centroid.YCoord}");
                 }
 
-                if (potentialFinderPatterns.Count > 3) {
-
+                if (potentialFinderPatterns.Count < 3) {
+                    // Empty assingment
+                    patterns = new QRFinderPatterns();
+                    return false;
                 }
 
-                patterns = new QRFinderPatterns();
-                return potentialFinderPatterns.Count != 0;
+                var finderPatterns = FilterFinderPatterns(potentialFinderPatterns);
+
+                patterns = DetermineFinderPatternPosition(finderPatterns);
+                return true;
             }
+
 
             public static bool TryGetAlignmentPatterns(Image<L8> image) {
                 return true;
@@ -379,9 +385,8 @@ namespace CodeReader {
                 }
             }
 
-            
-
-            private static List<QRFinderPattern> GetPotentialFinderPatternCoords(Image<L8> image) {
+        
+            private static List<QRFinderPattern> GetPotentialFinderPattern(Image<L8> image) {
                 List<QRFinderPattern> finderPatternPixels = new List<QRFinderPattern>();
 
                 Memory<L8> pixelMemory;
@@ -399,7 +404,6 @@ namespace CodeReader {
                         if (!finderExtractor.IsPossibleFinderPattern) {
                             continue;
                         }
-
 
                         // Check vertical
                         int centerOfMiddleBloc = finderExtractor.GetMiddleOfRowBlocs();
@@ -434,6 +438,16 @@ namespace CodeReader {
                 }
 
                 return finderPatternPixels;
+            }
+
+            private static List<QRFinderPattern> FilterFinderPatterns(List<QRFinderPattern> patterns) {
+
+                return new List<QRFinderPattern>();
+            }
+
+            private static QRFinderPatterns DetermineFinderPatternPosition(List<QRFinderPattern> patterns) {
+
+                return new QRFinderPatterns();
             }
         }
     }
