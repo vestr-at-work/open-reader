@@ -43,16 +43,16 @@ namespace CodeReader {
         struct QRFinderPattern {
             public QRFinderPattern(PixelCoord centroid, int width, int height) {
                 Centroid = centroid;
-                Width = width;
-                Height = height;
+                EstimatedWidth = width;
+                EstimatedHeight = height;
             }
             public PixelCoord Centroid;
-            public int Width;
-            public int Height;
+            public int EstimatedWidth;
+            public int EstimatedHeight;
 
             public override string ToString()
             {
-                return $"QRFinderPattern: {{ Centroid: {Centroid}, Width: {Width}, Height: {Height} }}";
+                return $"QRFinderPattern: {{ Centroid: {Centroid}, Width: {EstimatedWidth}, Height: {EstimatedHeight} }}";
             }
         }
         
@@ -62,6 +62,7 @@ namespace CodeReader {
             Stopwatch sw = new Stopwatch();
             sw.Start();
             
+            // TODO: Make a method for this
             if (image.Width > 300 && image.Width > image.Height) {
                 //when one side is equal to 0 the side gets scaled to preserve the ratio of original image
                 image.Mutate(x => x.Resize(300, 0));
@@ -87,7 +88,10 @@ namespace CodeReader {
             Console.WriteLine($"topRight: {finderPatterns.TopRightPattern}");
             Console.WriteLine($"bottomLeft: {finderPatterns.BottomLeftPattern}");
 
+            int moduleSize = QRInfoExtractor.GetModuleSize(finderPatterns);
+            int version = QRInfoExtractor.GetVersion(finderPatterns, moduleSize);
 
+            byte[,] qrDataMatrix = QRImageResampler.Resample(binarizedImage, moduleSize, version);
 
             sw.Stop();
             Console.WriteLine($"time: {sw.Elapsed}");
@@ -101,6 +105,30 @@ namespace CodeReader {
             // Dummy implementation
             rawDataMatrix = new RawQRData();
             return true;
+        }
+
+        static class QRInfoExtractor {
+            public static int GetModuleSize(QRFinderPatterns patterns) {
+
+
+                // Dummy implementation
+                return 5;
+            }
+
+            public static int GetVersion(QRFinderPatterns patterns, int moduleSize) {
+
+                // Dummy implementation
+                return 5;
+            }
+        }
+
+        static class QRImageResampler {
+            public static byte[,] Resample(Image<L8> image, int moduleSize, int version) {
+                
+
+                // Dummy implementation
+                return new byte[1,2];
+            }
         }
         
 
@@ -512,8 +540,8 @@ namespace CodeReader {
                         count++;
                         sumX += pattern.Centroid.XCoord;
                         sumY += pattern.Centroid.YCoord;
-                        sumWidth += pattern.Width;
-                        sumHeight += pattern.Height;
+                        sumWidth += pattern.EstimatedWidth;
+                        sumHeight += pattern.EstimatedHeight;
                     }
 
                     var averageCentroid = new PixelCoord(sumX / count, sumY / count);
