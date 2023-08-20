@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using CodeReaderCommons;
+using System.Numerics;
 
 
 namespace CodeReader {
@@ -22,9 +23,18 @@ namespace CodeReader {
                 return (int)Math.Sqrt(Math.Pow(this.XCoord - other.XCoord, 2) 
                             + Math.Pow(this.YCoord - other.YCoord, 2));
             }
+
+            public override string ToString() {
+                return $"XCoord: {XCoord}, YCoord: {YCoord}";
+            }
         }
 
         struct QRFinderPatterns {
+            public QRFinderPatterns(QRFinderPattern topLeft, QRFinderPattern topRight, QRFinderPattern bottomLeft) {
+                TopLeftPattern = topLeft;
+                TopRightPattern = topRight;
+                BottomLeftPattern = bottomLeft; 
+            }
             public QRFinderPattern TopLeftPattern;
             public QRFinderPattern TopRightPattern;
             public QRFinderPattern BottomLeftPattern;
@@ -39,6 +49,11 @@ namespace CodeReader {
             public PixelCoord Centroid;
             public int Width;
             public int Height;
+
+            public override string ToString()
+            {
+                return $"QRFinderPattern: {{ Centroid: {Centroid}, Width: {Width}, Height: {Height} }}";
+            }
         }
         
         public static bool TryGetRawData<TPixel>(Image<TPixel> image, out RawQRData? rawDataMatrix) 
@@ -68,6 +83,10 @@ namespace CodeReader {
                 return false;
             }
 
+            Console.WriteLine($"topLeft: {finderPatterns.TopLeftPattern}");
+            Console.WriteLine($"topRight: {finderPatterns.TopRightPattern}");
+            Console.WriteLine($"bottomLeft: {finderPatterns.BottomLeftPattern}");
+
 
 
             sw.Stop();
@@ -93,11 +112,11 @@ namespace CodeReader {
 
                 List<QRFinderPattern> potentialFinderPatterns = GetPotentialFinderPattern(image);
 
-                // Debug print
-                foreach (var pattern in potentialFinderPatterns) {
-                    Console.WriteLine($"x: {pattern.Centroid.XCoord}, y: {pattern.Centroid.YCoord}");
-                }
-                Console.WriteLine("-----");
+                // // Debug print
+                // foreach (var pattern in potentialFinderPatterns) {
+                //     Console.WriteLine($"x: {pattern.Centroid.XCoord}, y: {pattern.Centroid.YCoord}");
+                // }
+                // Console.WriteLine("-----");
 
 
                 if (potentialFinderPatterns.Count < 3) {
@@ -108,11 +127,7 @@ namespace CodeReader {
 
                 var finderPatterns = FilterFinderPatterns(potentialFinderPatterns);
 
-                foreach (var pattern in finderPatterns) {
-                    Console.WriteLine($"x: {pattern.Centroid.XCoord}, y: {pattern.Centroid.YCoord}");
-                }
-
-                patterns = DetermineFinderPatternPosition(finderPatterns);
+                patterns = DetermineFinderPatternRelations(finderPatterns);
                 return true;
             }
 
@@ -139,6 +154,8 @@ namespace CodeReader {
             /// Private class used to find finder pattern based on relation of black and white blocks.
             /// Ratio of finder pattern's scan line black:white:black:white:black blocs should be 1:1:3:1:1. 
             /// This ratio is kept from all directions (we are checking first horizontal then vertical).
+            /// 
+            /// TODO: Explain better the public methods and sketch out the algorithm better.
             /// </summary>
             private class FinderPatternExtractor {
                 public FinderPatternExtractor(int row) {
@@ -175,11 +192,11 @@ namespace CodeReader {
                 }
 
                 public int GetPatternWidth() {
-                    return (((ColorBloc)_rowBlocs[(int)Bloc.LastBlack]!).EndIndex - ((ColorBloc)_rowBlocs[(int)Bloc.FirstBlack]!).StartIndex);
+                    return (((ColorBloc)_rowBlocs[(int)Bloc.LastBlack]!).EndIndex - ((ColorBloc)_rowBlocs[(int)Bloc.FirstBlack]!).StartIndex) + 1;
                 }
 
                 public int GetPatternHeight() {
-                    return (((ColorBloc)_columnBlocs[(int)Bloc.LastBlack]!).EndIndex - ((ColorBloc)_columnBlocs[(int)Bloc.FirstBlack]!).StartIndex);
+                    return (((ColorBloc)_columnBlocs[(int)Bloc.LastBlack]!).EndIndex - ((ColorBloc)_columnBlocs[(int)Bloc.FirstBlack]!).StartIndex) + 1;
                 }
 
                 public int GetMiddleOfRowBlocs() {
@@ -507,9 +524,54 @@ namespace CodeReader {
                 return finalThreeFinderPatterns;
             }
 
-            private static QRFinderPatterns DetermineFinderPatternPosition(List<QRFinderPattern> patterns) {
+            /// <summary>
+            /// Method uses angles between pattern centroids to determine which pattern is which.
+            /// </summary>
+            /// <param name="patterns"></param>
+            /// <returns></returns>
+            private static QRFinderPatterns DetermineFinderPatternRelations(List<QRFinderPattern> patterns) {
+                double[] angles = new double[3];
+                angles[0] = GetAdjacentAngle(patterns[0].Centroid, patterns[1].Centroid, patterns[2].Centroid);
+                angles[1] = GetAdjacentAngle(patterns[1].Centroid, patterns[0].Centroid, patterns[2].Centroid);
+                angles[2] = GetAdjacentAngle(patterns[2].Centroid, patterns[0].Centroid, patterns[1].Centroid);
+
+                Console.WriteLine($"first: {angles[0]}, second: {angles[1]}, third: {angles[2]}");
+
+                var maxAngle = Math.Max(Math.Max(angles[0], angles[1]), angles[2]);
+
+                if (maxAngle == angles[0]) {
+                    return GetFinalQRFinderPatterns(patterns[0], patterns[1], patterns[2]);
+                }
+                if (maxAngle == angles[1]) {
+                    return GetFinalQRFinderPatterns(patterns[1], patterns[0], patterns[2]);
+                }
+                if (maxAngle == angles[2]) {
+                    return GetFinalQRFinderPatterns(patterns[2], patterns[0], patterns[1]);
+                }
 
                 return new QRFinderPatterns();
+            }
+
+            private static QRFinderPatterns GetFinalQRFinderPatterns(QRFinderPattern upperLeft, QRFinderPattern otherPatternA, QRFinderPattern otherPatternB) {
+
+                var crossProduct = ((otherPatternA.Centroid.XCoord - upperLeft.Centroid.XCoord) 
+                                * (otherPatternB.Centroid.YCoord - upperLeft.Centroid.YCoord))
+                                - ((otherPatternA.Centroid.YCoord - upperLeft.Centroid.YCoord) 
+                                * (otherPatternB.Centroid.XCoord - upperLeft.Centroid.XCoord));
+
+                if (crossProduct > 0) {
+                    return new QRFinderPatterns(upperLeft, otherPatternA, otherPatternB);
+                }
+
+                return new QRFinderPatterns(upperLeft, otherPatternB, otherPatternA);
+
+            }
+
+            private static double GetAdjacentAngle(PixelCoord mainVertex, PixelCoord secondaryVertexA, PixelCoord secondaryVertexB) {
+                Vector2 mainToA = new Vector2(secondaryVertexA.XCoord - mainVertex.XCoord, secondaryVertexA.YCoord - mainVertex.YCoord);
+                Vector2 mainToB = new Vector2(secondaryVertexB.XCoord - mainVertex.XCoord, secondaryVertexB.YCoord - mainVertex.YCoord);
+
+                return (Math.Acos((Vector2.Dot(mainToA, mainToB) / (double)(mainToA.Length() * mainToB.Length()))) / (2 * Math.PI)) * 360;
             }
 
         }
