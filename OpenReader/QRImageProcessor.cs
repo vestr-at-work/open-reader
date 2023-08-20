@@ -107,7 +107,17 @@ namespace CodeReader {
             return true;
         }
 
+        /// <summary>
+        /// Internal class responsible for extracting preliminary info about QR code.
+        /// Main public methods are 'GetModuleSize' and 'GetVersion'.
+        /// </summary>
         static class QRInfoExtractor {
+            /// <summary>
+            /// Calculates and returns the size of module (black or white square in the QR code) from Finder patterns and estimated width.
+            /// Main method of the QRInfoExtractor class. 
+            /// </summary>
+            /// <param name="patterns">Finder patterns.</param>
+            /// <returns>Size of the module.</returns>
             public static int GetModuleSize(QRFinderPatterns patterns) {
 
 
@@ -115,6 +125,13 @@ namespace CodeReader {
                 return 5;
             }
 
+            /// <summary>
+            /// Estimates the version of the QR code based on the distance of the Finder pattens from each other and module size.
+            /// Main method of the QRInfoExtractor class.
+            /// </summary>
+            /// <param name="patterns">Finder patterns.</param>
+            /// <param name="moduleSize">QR code's estimated module size.</param>
+            /// <returns>Estimated version of the QR code.</returns>
             public static int GetVersion(QRFinderPatterns patterns, int moduleSize) {
 
                 // Dummy implementation
@@ -122,8 +139,23 @@ namespace CodeReader {
             }
         }
 
+
+        /// <summary>
+        /// Internal class responsible for resampling the high resolution binerized image 
+        /// into 2D array of bytes with the same width as is the number of modules a QR code of the given version.
+        /// Main public method is called 'Resample'.
+        /// </summary>
         static class QRImageResampler {
-            public static byte[,] Resample(Image<L8> image, int moduleSize, int version) {
+            /// <summary>
+            /// Resamples the high resolution binerized image into 2D array of bytes 
+            /// with the same width as is the number of modules a QR code of the given version.
+            /// Main method of the QRImageResampler class.
+            /// </summary>
+            /// <param name="binerizedImage">Binerized image of QR code.</param>
+            /// <param name="moduleSize">Size of one module of the QR code.</param>
+            /// <param name="version">Estimated version of the QR code.</param>
+            /// <returns>Resampled QR code image data. Value 0 means black, value 255 means white.</returns>
+            public static byte[,] Resample(Image<L8> binerizedImage, int moduleSize, int version) {
                 
 
                 // Dummy implementation
