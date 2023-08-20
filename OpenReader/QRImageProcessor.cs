@@ -539,6 +539,7 @@ namespace CodeReader {
 
                 var maxAngle = Math.Max(Math.Max(angles[0], angles[1]), angles[2]);
 
+                // TODO: ADD CHECKING IF ANGLE IS WITHIN ERROR MARGIN
                 if (maxAngle == angles[0]) {
                     return GetFinalQRFinderPatterns(patterns[0], patterns[1], patterns[2]);
                 }
