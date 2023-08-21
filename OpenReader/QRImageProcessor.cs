@@ -19,8 +19,8 @@ namespace CodeReader {
             public int XCoord;
             public int YCoord;
 
-            public int DistanceFrom(PixelCoord other) {
-                return (int)Math.Sqrt(Math.Pow(this.XCoord - other.XCoord, 2) 
+            public double DistanceFrom(PixelCoord other) {
+                return Math.Sqrt(Math.Pow(this.XCoord - other.XCoord, 2) 
                             + Math.Pow(this.YCoord - other.YCoord, 2));
             }
 
@@ -88,9 +88,10 @@ namespace CodeReader {
             Console.WriteLine($"topRight: {finderPatterns.TopRightPattern}");
             Console.WriteLine($"bottomLeft: {finderPatterns.BottomLeftPattern}");
             
-            int moduleSize = QRInfoExtractor.GetModuleSize(finderPatterns, out double rotationAngle);
-            Console.WriteLine(moduleSize);
+            double moduleSize = QRInfoExtractor.GetModuleSize(finderPatterns, out double rotationAngle);
             int version = QRInfoExtractor.GetVersion(finderPatterns, moduleSize, rotationAngle);
+
+            Console.WriteLine($"moduleSize: {moduleSize}, version: {version}");
 
             byte[,] qrDataMatrix = QRImageResampler.Resample(binarizedImage, moduleSize, version);
 
@@ -119,13 +120,13 @@ namespace CodeReader {
             /// </summary>
             /// <param name="patterns">Finder patterns.</param>
             /// <returns>Size of the module.</returns>
-            public static int GetModuleSize(QRFinderPatterns patterns, out double rotationAngle) {
+            public static double GetModuleSize(QRFinderPatterns patterns, out double rotationAngle) {
                 var topLeft = patterns.TopLeftPattern;
                 var topRight = patterns.TopRightPattern;
                 Vector2 fromTopLeftToTopRight = new Vector2(topRight.Centroid.XCoord - topLeft.Centroid.XCoord, topRight.Centroid.YCoord - topLeft.Centroid.YCoord);
                 int signSwitch = 1;
 
-                // If top left pattern to the left of the top right pattern in the image
+                // If top left pattern to the right of the top right pattern in the image
                 if (patterns.TopLeftPattern.Centroid.XCoord > patterns.TopRightPattern.Centroid.XCoord) {
                     signSwitch = -1;
                 }
@@ -135,6 +136,7 @@ namespace CodeReader {
                 PixelCoord topRightReferencePoint = new PixelCoord(oppositeSidePoint.XCoord + (int)fromTopLeftToTopRight.X, oppositeSidePoint.YCoord + (int)fromTopLeftToTopRight.Y);
                 var angleAdjacentToOppositeSidePoint = GetAdjacentAngle(oppositeSidePoint, adjacentSidePoint, topRightReferencePoint);
                 var hypotenuse = topLeft.EstimatedWidth;
+                Console.WriteLine($"width: {hypotenuse}");
 
                 // If angle from width not within correct range recalculate with height.
                 // This means that top right finder pattern is much higher than top left finder patter.
@@ -146,7 +148,7 @@ namespace CodeReader {
                     hypotenuse = topLeft.EstimatedHeight;
                 }
 
-                int patternWidth = (int)(Math.Cos(angleAdjacentToOppositeSidePoint) * hypotenuse); 
+                double patternWidth = Math.Cos(angleAdjacentToOppositeSidePoint) * hypotenuse; 
                 rotationAngle = angleAdjacentToOppositeSidePoint;
                 return patternWidth / 7;
                 
@@ -158,11 +160,16 @@ namespace CodeReader {
             /// </summary>
             /// <param name="patterns">Finder patterns.</param>
             /// <param name="moduleSize">QR code's estimated module size.</param>
+            /// <param name="rotationAngle"></param>
             /// <returns>Estimated version of the QR code.</returns>
-            public static int GetVersion(QRFinderPatterns patterns, int moduleSize, double rotationAngle) {
+            public static int GetVersion(QRFinderPatterns patterns, double moduleSize, double rotationAngle) {
+                var topLeft = patterns.TopLeftPattern;
+                var topRight = patterns.TopRightPattern;
+                double version = (((topLeft.Centroid.DistanceFrom(topRight.Centroid) / moduleSize) * Math.Cos(rotationAngle) - 10) / 4);
+                Console.WriteLine(topLeft.Centroid.DistanceFrom(topRight.Centroid));
+                Console.WriteLine($"cos: {Math.Cos(rotationAngle)}, angle: {rotationAngle / (2 * Math.PI) * 360}, version: {version}");
 
-                // Dummy implementation
-                return 5;
+                return Convert.ToInt32(version);
             }
         }
 
@@ -182,7 +189,7 @@ namespace CodeReader {
             /// <param name="moduleSize">Size of one module of the QR code.</param>
             /// <param name="version">Estimated version of the QR code.</param>
             /// <returns>Resampled QR code image data. Value 0 means black, value 255 means white.</returns>
-            public static byte[,] Resample(Image<L8> binerizedImage, int moduleSize, int version) {
+            public static byte[,] Resample(Image<L8> binerizedImage, double moduleSize, int version) {
                 
 
                 // Dummy implementation
@@ -279,11 +286,11 @@ namespace CodeReader {
                 }
 
                 public int GetPatternWidth() {
-                    return (((ColorBloc)_rowBlocs[(int)Bloc.LastBlack]!).EndIndex - ((ColorBloc)_rowBlocs[(int)Bloc.FirstBlack]!).StartIndex) + 1;
+                    return (((ColorBloc)_rowBlocs[(int)Bloc.LastBlack]!).EndIndex - ((ColorBloc)_rowBlocs[(int)Bloc.FirstBlack]!).StartIndex);
                 }
 
                 public int GetPatternHeight() {
-                    return (((ColorBloc)_columnBlocs[(int)Bloc.LastBlack]!).EndIndex - ((ColorBloc)_columnBlocs[(int)Bloc.FirstBlack]!).StartIndex) + 1;
+                    return (((ColorBloc)_columnBlocs[(int)Bloc.LastBlack]!).EndIndex - ((ColorBloc)_columnBlocs[(int)Bloc.FirstBlack]!).StartIndex);
                 }
 
                 public int GetMiddleOfRowBlocs() {
