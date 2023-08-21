@@ -87,10 +87,10 @@ namespace CodeReader {
             Console.WriteLine($"topLeft: {finderPatterns.TopLeftPattern}");
             Console.WriteLine($"topRight: {finderPatterns.TopRightPattern}");
             Console.WriteLine($"bottomLeft: {finderPatterns.BottomLeftPattern}");
-
-            int moduleSize = QRInfoExtractor.GetModuleSize(finderPatterns);
+            
+            int moduleSize = QRInfoExtractor.GetModuleSize(finderPatterns, out double rotationAngle);
             Console.WriteLine(moduleSize);
-            int version = QRInfoExtractor.GetVersion(finderPatterns, moduleSize);
+            int version = QRInfoExtractor.GetVersion(finderPatterns, moduleSize, rotationAngle);
 
             byte[,] qrDataMatrix = QRImageResampler.Resample(binarizedImage, moduleSize, version);
 
@@ -119,7 +119,7 @@ namespace CodeReader {
             /// </summary>
             /// <param name="patterns">Finder patterns.</param>
             /// <returns>Size of the module.</returns>
-            public static int GetModuleSize(QRFinderPatterns patterns) {
+            public static int GetModuleSize(QRFinderPatterns patterns, out double rotationAngle) {
                 var topLeft = patterns.TopLeftPattern;
                 var topRight = patterns.TopRightPattern;
                 Vector2 fromTopLeftToTopRight = new Vector2(topRight.Centroid.XCoord - topLeft.Centroid.XCoord, topRight.Centroid.YCoord - topLeft.Centroid.YCoord);
@@ -133,20 +133,21 @@ namespace CodeReader {
                 PixelCoord oppositeSidePoint = new PixelCoord(topLeft.Centroid.XCoord - (signSwitch * (topLeft.EstimatedWidth / 2)), topLeft.Centroid.YCoord);
                 PixelCoord adjacentSidePoint = new PixelCoord(topLeft.Centroid.XCoord + (signSwitch * (topLeft.EstimatedWidth / 2)), topLeft.Centroid.YCoord);
                 PixelCoord topRightReferencePoint = new PixelCoord(oppositeSidePoint.XCoord + (int)fromTopLeftToTopRight.X, oppositeSidePoint.YCoord + (int)fromTopLeftToTopRight.Y);
-                var angleByOppositeSidePoint = GetAdjacentAngle(oppositeSidePoint, adjacentSidePoint, topRightReferencePoint);
+                var angleAdjacentToOppositeSidePoint = GetAdjacentAngle(oppositeSidePoint, adjacentSidePoint, topRightReferencePoint);
                 var hypotenuse = topLeft.EstimatedWidth;
 
                 // If angle from width not within correct range recalculate with height.
                 // This means that top right finder pattern is much higher than top left finder patter.
-                if (angleByOppositeSidePoint > (Math.PI / 4)) {
+                if (angleAdjacentToOppositeSidePoint > (Math.PI / 4)) {
                     oppositeSidePoint = new PixelCoord(topLeft.Centroid.XCoord, topLeft.Centroid.YCoord + (signSwitch * (topLeft.EstimatedHeight / 2)));
                     adjacentSidePoint = new PixelCoord(topLeft.Centroid.XCoord, topLeft.Centroid.YCoord - (signSwitch * (topLeft.EstimatedHeight / 2)));
                     topRightReferencePoint = new PixelCoord(oppositeSidePoint.XCoord + (int)fromTopLeftToTopRight.X, oppositeSidePoint.YCoord + (int)fromTopLeftToTopRight.Y);
-                    angleByOppositeSidePoint = GetAdjacentAngle(oppositeSidePoint, adjacentSidePoint, topRightReferencePoint);
+                    angleAdjacentToOppositeSidePoint = GetAdjacentAngle(oppositeSidePoint, adjacentSidePoint, topRightReferencePoint);
                     hypotenuse = topLeft.EstimatedHeight;
                 }
 
-                int patternWidth = (int)(Math.Cos(angleByOppositeSidePoint) * hypotenuse); 
+                int patternWidth = (int)(Math.Cos(angleAdjacentToOppositeSidePoint) * hypotenuse); 
+                rotationAngle = angleAdjacentToOppositeSidePoint;
                 return patternWidth / 7;
                 
             }
@@ -158,7 +159,7 @@ namespace CodeReader {
             /// <param name="patterns">Finder patterns.</param>
             /// <param name="moduleSize">QR code's estimated module size.</param>
             /// <returns>Estimated version of the QR code.</returns>
-            public static int GetVersion(QRFinderPatterns patterns, int moduleSize) {
+            public static int GetVersion(QRFinderPatterns patterns, int moduleSize, double rotationAngle) {
 
                 // Dummy implementation
                 return 5;
