@@ -123,6 +123,7 @@ namespace CodeReader {
             public static double GetModuleSize(QRFinderPatterns patterns, out double rotationAngle) {
                 var topLeft = patterns.TopLeftPattern;
                 var topRight = patterns.TopRightPattern;
+                var bottomLeft = patterns.BottomLeftPattern;
                 Vector2 fromTopLeftToTopRight = new Vector2(topRight.Centroid.XCoord - topLeft.Centroid.XCoord, topRight.Centroid.YCoord - topLeft.Centroid.YCoord);
                 int signSwitch = 1;
 
@@ -149,9 +150,11 @@ namespace CodeReader {
                 }
                 Console.WriteLine($"width: {hypotenuse}");
 
+                var widthScale = (((double)topRight.EstimatedWidth / topLeft.EstimatedWidth) + ((double)bottomLeft.EstimatedWidth / topLeft.EstimatedWidth)) / 2;
+
                 double patternWidth = Math.Cos(angleAdjacentToOppositeSidePoint) * hypotenuse; 
                 rotationAngle = angleAdjacentToOppositeSidePoint;
-                return patternWidth / 7;
+                return (patternWidth * widthScale) / 7;
                 
             }
 
