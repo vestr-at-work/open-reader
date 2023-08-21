@@ -136,17 +136,18 @@ namespace CodeReader {
                 PixelCoord topRightReferencePoint = new PixelCoord(oppositeSidePoint.XCoord + (int)fromTopLeftToTopRight.X, oppositeSidePoint.YCoord + (int)fromTopLeftToTopRight.Y);
                 var angleAdjacentToOppositeSidePoint = GetAdjacentAngle(oppositeSidePoint, adjacentSidePoint, topRightReferencePoint);
                 var hypotenuse = topLeft.EstimatedWidth;
-                Console.WriteLine($"width: {hypotenuse}");
+                
 
                 // If angle from width not within correct range recalculate with height.
                 // This means that top right finder pattern is much higher than top left finder patter.
                 if (angleAdjacentToOppositeSidePoint > (Math.PI / 4)) {
-                    oppositeSidePoint = new PixelCoord(topLeft.Centroid.XCoord, topLeft.Centroid.YCoord + (signSwitch * (topLeft.EstimatedHeight / 2)));
-                    adjacentSidePoint = new PixelCoord(topLeft.Centroid.XCoord, topLeft.Centroid.YCoord - (signSwitch * (topLeft.EstimatedHeight / 2)));
+                    oppositeSidePoint = new PixelCoord(topLeft.Centroid.XCoord, topLeft.Centroid.YCoord - (signSwitch * (topLeft.EstimatedHeight / 2)));
+                    adjacentSidePoint = new PixelCoord(topLeft.Centroid.XCoord, topLeft.Centroid.YCoord + (signSwitch * (topLeft.EstimatedHeight / 2)));
                     topRightReferencePoint = new PixelCoord(oppositeSidePoint.XCoord + (int)fromTopLeftToTopRight.X, oppositeSidePoint.YCoord + (int)fromTopLeftToTopRight.Y);
                     angleAdjacentToOppositeSidePoint = GetAdjacentAngle(oppositeSidePoint, adjacentSidePoint, topRightReferencePoint);
                     hypotenuse = topLeft.EstimatedHeight;
                 }
+                Console.WriteLine($"width: {hypotenuse}");
 
                 double patternWidth = Math.Cos(angleAdjacentToOppositeSidePoint) * hypotenuse; 
                 rotationAngle = angleAdjacentToOppositeSidePoint;
