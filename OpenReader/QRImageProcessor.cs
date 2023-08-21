@@ -89,6 +89,7 @@ namespace CodeReader {
             Console.WriteLine($"bottomLeft: {finderPatterns.BottomLeftPattern}");
 
             int moduleSize = QRInfoExtractor.GetModuleSize(finderPatterns);
+            Console.WriteLine(moduleSize);
             int version = QRInfoExtractor.GetVersion(finderPatterns, moduleSize);
 
             byte[,] qrDataMatrix = QRImageResampler.Resample(binarizedImage, moduleSize, version);
@@ -119,10 +120,35 @@ namespace CodeReader {
             /// <param name="patterns">Finder patterns.</param>
             /// <returns>Size of the module.</returns>
             public static int GetModuleSize(QRFinderPatterns patterns) {
+                var topLeft = patterns.TopLeftPattern;
+                var topRight = patterns.TopRightPattern;
+                Vector2 fromTopLeftToTopRight = new Vector2(topRight.Centroid.XCoord - topLeft.Centroid.XCoord, topRight.Centroid.YCoord - topLeft.Centroid.YCoord);
+                int signSwitch = 1;
 
+                // If top left pattern to the left of the top right pattern in the image
+                if (patterns.TopLeftPattern.Centroid.XCoord > patterns.TopRightPattern.Centroid.XCoord) {
+                    signSwitch = -1;
+                }
 
-                // Dummy implementation
-                return 5;
+                PixelCoord oppositeSidePoint = new PixelCoord(topLeft.Centroid.XCoord - (signSwitch * (topLeft.EstimatedWidth / 2)), topLeft.Centroid.YCoord);
+                PixelCoord adjacentSidePoint = new PixelCoord(topLeft.Centroid.XCoord + (signSwitch * (topLeft.EstimatedWidth / 2)), topLeft.Centroid.YCoord);
+                PixelCoord topRightReferencePoint = new PixelCoord(oppositeSidePoint.XCoord + (int)fromTopLeftToTopRight.X, oppositeSidePoint.YCoord + (int)fromTopLeftToTopRight.Y);
+                var angleByOppositeSidePoint = GetAdjacentAngle(oppositeSidePoint, adjacentSidePoint, topRightReferencePoint);
+                var hypotenuse = topLeft.EstimatedWidth;
+
+                // If angle from width not within correct range recalculate with height.
+                // This means that top right finder pattern is much higher than top left finder patter.
+                if (angleByOppositeSidePoint > (Math.PI / 4)) {
+                    oppositeSidePoint = new PixelCoord(topLeft.Centroid.XCoord, topLeft.Centroid.YCoord + (signSwitch * (topLeft.EstimatedHeight / 2)));
+                    adjacentSidePoint = new PixelCoord(topLeft.Centroid.XCoord, topLeft.Centroid.YCoord - (signSwitch * (topLeft.EstimatedHeight / 2)));
+                    topRightReferencePoint = new PixelCoord(oppositeSidePoint.XCoord + (int)fromTopLeftToTopRight.X, oppositeSidePoint.YCoord + (int)fromTopLeftToTopRight.Y);
+                    angleByOppositeSidePoint = GetAdjacentAngle(oppositeSidePoint, adjacentSidePoint, topRightReferencePoint);
+                    hypotenuse = topLeft.EstimatedHeight;
+                }
+
+                int patternWidth = (int)(Math.Cos(angleByOppositeSidePoint) * hypotenuse); 
+                return patternWidth / 7;
+                
             }
 
             /// <summary>
@@ -627,14 +653,20 @@ namespace CodeReader {
                 return new QRFinderPatterns(upperLeft, otherPatternB, otherPatternA);
 
             }
+        }
 
-            private static double GetAdjacentAngle(PixelCoord mainVertex, PixelCoord secondaryVertexA, PixelCoord secondaryVertexB) {
-                Vector2 mainToA = new Vector2(secondaryVertexA.XCoord - mainVertex.XCoord, secondaryVertexA.YCoord - mainVertex.YCoord);
-                Vector2 mainToB = new Vector2(secondaryVertexB.XCoord - mainVertex.XCoord, secondaryVertexB.YCoord - mainVertex.YCoord);
+        /// <summary>
+        /// Gets adjacent angle from three coordinates.
+        /// </summary>
+        /// <param name="mainVertex"></param>
+        /// <param name="secondaryVertexA"></param>
+        /// <param name="secondaryVertexB"></param>
+        /// <returns>Adjacent angle in radians.</returns>
+        private static double GetAdjacentAngle(PixelCoord mainVertex, PixelCoord secondaryVertexA, PixelCoord secondaryVertexB) {
+            Vector2 mainToA = new Vector2(secondaryVertexA.XCoord - mainVertex.XCoord, secondaryVertexA.YCoord - mainVertex.YCoord);
+            Vector2 mainToB = new Vector2(secondaryVertexB.XCoord - mainVertex.XCoord, secondaryVertexB.YCoord - mainVertex.YCoord);
 
-                return (Math.Acos((Vector2.Dot(mainToA, mainToB) / (double)(mainToA.Length() * mainToB.Length()))) / (2 * Math.PI)) * 360;
-            }
-
+            return Math.Acos((Vector2.Dot(mainToA, mainToB) / (double)(mainToA.Length() * mainToB.Length())));
         }
     }
 }
