@@ -211,8 +211,6 @@ namespace CodeReader {
                     { 1 }
                 });
 
-
-
                 Console.WriteLine($"{affineMatrix * point}");
 
                 image = new Image<L8>(codeSideLength, codeSideLength);
@@ -228,10 +226,8 @@ namespace CodeReader {
 
                         // Check if the pixel coordinates are within the image bounds
                         if (pixelX >= 0 && pixelX < binerizedImage.Width && pixelY >= 0 && pixelY < binerizedImage.Height) {
-                            // Get the pixel value from the original image
                             byte pixelValue = binerizedImage[pixelX, pixelY].PackedValue;
 
-                            // Assign the pixel value to the resampled image array
                             resampledImage[x, y] = pixelValue;
                             image[x, y] = new L8(pixelValue);
                         }
@@ -242,7 +238,6 @@ namespace CodeReader {
             }
 
             private static Matrix<double> CalculateAffineMatrix(QRFinderPatterns patterns, int sideLength) {
-                // Extract pattern positions
                 double xTopLeft = patterns.TopLeftPattern.Centroid.XCoord;
                 double yTopLeft = patterns.TopLeftPattern.Centroid.YCoord;
                 double xTopRight = patterns.TopRightPattern.Centroid.XCoord;
@@ -250,39 +245,23 @@ namespace CodeReader {
                 double xBottomLeft = patterns.BottomLeftPattern.Centroid.XCoord;
                 double yBottomLeft = patterns.BottomLeftPattern.Centroid.YCoord;
 
-                // Create the input matrix from pattern positions
                 Matrix<double> imagePointsMatrix = Matrix<double>.Build.DenseOfArray(new double[,] {
                     { xTopLeft, xTopRight, xBottomLeft },
                     { yTopLeft, yTopRight, yBottomLeft },
                     { 1, 1, 1 }
                 });
 
-                // Create the inverse transformation matrix
                 Matrix<double> transformedPointsMatrix = Matrix<double>.Build.DenseOfArray(new double[,] {
                     { 3.5, sideLength - 3.5 , 3.5 },
                     { 3.5, 3.5, sideLength - 3.5 },
                     { 1, 1, 1 }
                 });
 
-                // Calculate the affine transformation matrix
                 Matrix<double> transformationMatrix = imagePointsMatrix * transformedPointsMatrix.Inverse();
 
                 return transformationMatrix;
 
-                Console.WriteLine(transformationMatrix * transformedPointsMatrix);
-
-                // Convert Math.NET Numerics matrix to a 2D array
-                double[,] result = new double[3, 2];
-                for (int j = 0; j < 2; j++)
-                {
-                    for (int i = 0; i < 3; i++)
-                    {
-                        result[i, j] = transformationMatrix[j, i];
-                    }
-                }
-
-                //return result;
-        
+                //Console.WriteLine(transformationMatrix * transformedPointsMatrix);
             }
         }
         
