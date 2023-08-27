@@ -17,3 +17,4 @@
 /home/vestr/moje soubory/matfyz/pokročilé programování v jazyce c#/open-reader/OpenReader/obj/Debug/net7.0/OpenReader.genruntimeconfig.cache
 /home/vestr/moje soubory/matfyz/pokročilé programování v jazyce c#/open-reader/OpenReader/obj/Debug/net7.0/ref/OpenReader.dll
 /home/vestr/moje soubory/matfyz/pokročilé programování v jazyce c#/open-reader/OpenReader/bin/Debug/net7.0/SixLabors.ImageSharp.dll
+/home/vestr/moje soubory/matfyz/pokročilé programování v jazyce c#/open-reader/OpenReader/bin/Debug/net7.0/MathNet.Numerics.dll

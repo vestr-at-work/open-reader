@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using CodeReaderCommons;
 using System.Numerics;
+using MathNet.Numerics.LinearAlgebra;
 
 
 namespace CodeReader {
@@ -93,14 +94,16 @@ namespace CodeReader {
 
             Console.WriteLine($"moduleSize: {moduleSize}, version: {version}");
 
-            byte[,] qrDataMatrix = QRImageResampler.Resample(binarizedImage, moduleSize, version);
+            byte[,] qrDataMatrix = QRImageResampler.Resample(binarizedImage, finderPatterns, version, out Image<L8> testImage);
 
             sw.Stop();
             Console.WriteLine($"time: {sw.Elapsed}");
 
             binarizedImage.Save("../TestData/QRCodeTestOUTPUT.png");
             binarizedImage.Dispose();
-            
+
+            testImage.Save("../TestData/QRCodeTestResampledOUTPUT.png");
+            testImage.Dispose();
             //image.Save("../TestData/QRCodeTest1OUTPUT.png");
 
             
@@ -148,13 +151,13 @@ namespace CodeReader {
                     angleAdjacentToOppositeSidePoint = GetAdjacentAngle(oppositeSidePoint, adjacentSidePoint, topRightReferencePoint);
                     hypotenuse = topLeft.EstimatedHeight;
                 }
-                Console.WriteLine($"width: {hypotenuse}");
+                
 
-                var widthScale = (((double)topRight.EstimatedWidth / topLeft.EstimatedWidth) + ((double)bottomLeft.EstimatedWidth / topLeft.EstimatedWidth)) / 2;
-
+                var scale = (((double)topRight.EstimatedWidth / topLeft.EstimatedWidth) + ((double)bottomLeft.EstimatedWidth / topLeft.EstimatedWidth)) / 2;
+                Console.WriteLine($"width: {hypotenuse}, scale: {scale}");
                 double patternWidth = Math.Cos(angleAdjacentToOppositeSidePoint) * hypotenuse; 
                 rotationAngle = angleAdjacentToOppositeSidePoint;
-                return (patternWidth * widthScale) / 7;
+                return (patternWidth * scale) / 7;
                 
             }
 
@@ -193,11 +196,93 @@ namespace CodeReader {
             /// <param name="moduleSize">Size of one module of the QR code.</param>
             /// <param name="version">Estimated version of the QR code.</param>
             /// <returns>Resampled QR code image data. Value 0 means black, value 255 means white.</returns>
-            public static byte[,] Resample(Image<L8> binerizedImage, double moduleSize, int version) {
+            public static byte[,] Resample(Image<L8> binerizedImage, QRFinderPatterns patterns, int version, out Image<L8> image) {
                 
+                int codeSideLength = 17 + (4 * version);
+                int outputSize = codeSideLength;
 
-                // Dummy implementation
-                return new byte[1,2];
+                // Calculate the affine transformation matrix
+                Matrix<double> affineMatrix = CalculateAffineMatrix(patterns, codeSideLength);
+                byte[,] resampledImage = new byte[outputSize, outputSize];
+
+                var point = Matrix<double>.Build.DenseOfArray(new double[,] {
+                    { 3.5 },
+                    { 3.5 },
+                    { 1 }
+                });
+
+
+
+                Console.WriteLine($"{affineMatrix * point}");
+
+                image = new Image<L8>(codeSideLength, codeSideLength);
+
+                for (int y = 0; y < outputSize; y++) {
+                    for (int x = 0; x < outputSize; x++) {
+                        // Map the output array coordinates to the original image using the affine transformation
+                        double originalX = affineMatrix[0, 0] * (x + 0.5) + affineMatrix[0, 1] * (y + 0.5) + affineMatrix[0, 2];
+                        double originalY = affineMatrix[1, 0] * (x + 0.5) + affineMatrix[1, 1] * (y + 0.5) + affineMatrix[1, 2];
+
+                        int pixelX = (int)Math.Round(originalX);
+                        int pixelY = (int)Math.Round(originalY);
+
+                        // Check if the pixel coordinates are within the image bounds
+                        if (pixelX >= 0 && pixelX < binerizedImage.Width && pixelY >= 0 && pixelY < binerizedImage.Height) {
+                            // Get the pixel value from the original image
+                            byte pixelValue = binerizedImage[pixelX, pixelY].PackedValue;
+
+                            // Assign the pixel value to the resampled image array
+                            resampledImage[x, y] = pixelValue;
+                            image[x, y] = new L8(pixelValue);
+                        }
+                    }
+                }
+
+                return resampledImage;
+            }
+
+            private static Matrix<double> CalculateAffineMatrix(QRFinderPatterns patterns, int sideLength) {
+                // Extract pattern positions
+                double xTopLeft = patterns.TopLeftPattern.Centroid.XCoord;
+                double yTopLeft = patterns.TopLeftPattern.Centroid.YCoord;
+                double xTopRight = patterns.TopRightPattern.Centroid.XCoord;
+                double yTopRight = patterns.TopRightPattern.Centroid.YCoord;
+                double xBottomLeft = patterns.BottomLeftPattern.Centroid.XCoord;
+                double yBottomLeft = patterns.BottomLeftPattern.Centroid.YCoord;
+
+                // Create the input matrix from pattern positions
+                Matrix<double> imagePointsMatrix = Matrix<double>.Build.DenseOfArray(new double[,] {
+                    { xTopLeft, xTopRight, xBottomLeft },
+                    { yTopLeft, yTopRight, yBottomLeft },
+                    { 1, 1, 1 }
+                });
+
+                // Create the inverse transformation matrix
+                Matrix<double> transformedPointsMatrix = Matrix<double>.Build.DenseOfArray(new double[,] {
+                    { 3.5, sideLength - 3.5 , 3.5 },
+                    { 3.5, 3.5, sideLength - 3.5 },
+                    { 1, 1, 1 }
+                });
+
+                // Calculate the affine transformation matrix
+                Matrix<double> transformationMatrix = imagePointsMatrix * transformedPointsMatrix.Inverse();
+
+                return transformationMatrix;
+
+                Console.WriteLine(transformationMatrix * transformedPointsMatrix);
+
+                // Convert Math.NET Numerics matrix to a 2D array
+                double[,] result = new double[3, 2];
+                for (int j = 0; j < 2; j++)
+                {
+                    for (int i = 0; i < 3; i++)
+                    {
+                        result[i, j] = transformationMatrix[j, i];
+                    }
+                }
+
+                //return result;
+        
             }
         }
         
@@ -494,14 +579,6 @@ namespace CodeReader {
                 }
 
                 private void DisposeColumnInfo() {
-                    // Console.WriteLine("---");
-
-                    // foreach (var bloc in _columnBlocs) {
-                    //     if (bloc is not null) 
-                    //         Console.WriteLine($"{((ColorBloc)bloc!).StartIndex}, {((ColorBloc)bloc!).EndIndex}");
-                    //     else 
-                    //         Console.WriteLine("-");
-                    // }
                     IsFinderPattern = false;
                     _columnBlocs = new ColorBloc?[5];
                     _currentColumnBlocUpIsWhite = false;
@@ -553,7 +630,7 @@ namespace CodeReader {
                         }
 
                         if (finderExtractor.IsFinderPattern) {
-                            pixelSpan[(finderExtractor.GetMiddleOfColumnBlocs() * image.Width) + centerOfMiddleBloc].PackedValue = 200;
+                            //pixelSpan[(finderExtractor.GetMiddleOfColumnBlocs() * image.Width) + centerOfMiddleBloc].PackedValue = 200;
 
                             var centroid = new PixelCoord(centerOfMiddleBloc, finderExtractor.GetMiddleOfColumnBlocs());
                             var pattern = new QRFinderPattern(centroid, finderExtractor.GetPatternWidth(), finderExtractor.GetPatternHeight());
