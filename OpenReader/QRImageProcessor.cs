@@ -94,7 +94,7 @@ namespace CodeReader {
 
             Console.WriteLine($"moduleSize: {moduleSize}, version: {version}");
 
-            byte[,] qrDataMatrix = QRImageResampler.Resample(binarizedImage, finderPatterns, version, out Image<L8> testImage);
+            byte[,] qrDataMatrix = QRImageSampler.Sample(binarizedImage, finderPatterns, version, out Image<L8> testImage);
 
             sw.Stop();
             Console.WriteLine($"time: {sw.Elapsed}");
@@ -182,27 +182,25 @@ namespace CodeReader {
 
 
         /// <summary>
-        /// Internal class responsible for resampling the high resolution binerized image 
+        /// Internal class responsible for sampling the high resolution binerized image 
         /// into 2D array of bytes with the same width as is the number of modules a QR code of the given version.
-        /// Main public method is called 'Resample'.
+        /// Main public method is called 'Sample'.
         /// </summary>
-        static class QRImageResampler {
+        static class QRImageSampler {
             /// <summary>
-            /// Resamples the high resolution binerized image into 2D array of bytes 
+            /// Samples the high resolution binerized image into 2D array of bytes 
             /// with the same width as is the number of modules a QR code of the given version.
-            /// Main method of the QRImageResampler class.
+            /// Main method of the QRImageSampler class.
             /// </summary>
             /// <param name="binerizedImage">Binerized image of QR code.</param>
             /// <param name="moduleSize">Size of one module of the QR code.</param>
             /// <param name="version">Estimated version of the QR code.</param>
-            /// <returns>Resampled QR code image data. Value 0 means black, value 255 means white.</returns>
-            public static byte[,] Resample(Image<L8> binerizedImage, QRFinderPatterns patterns, int version, out Image<L8> image) {
-                
+            /// <returns>Sampled QR code image data. Value 0 means black, value 255 means white.</returns>
+            public static byte[,] Sample(Image<L8> binerizedImage, QRFinderPatterns patterns, int version, out Image<L8> image) {
                 int codeSideLength = 17 + (4 * version);
                 int outputSize = codeSideLength;
 
-                // Calculate the affine transformation matrix
-                Matrix<double> affineMatrix = CalculateAffineMatrix(patterns, codeSideLength);
+                Matrix<double> transformationMatrix = CalculateTransformationMatrix(patterns, codeSideLength);
                 byte[,] resampledImage = new byte[outputSize, outputSize];
 
                 var point = Matrix<double>.Build.DenseOfArray(new double[,] {
@@ -211,15 +209,15 @@ namespace CodeReader {
                     { 1 }
                 });
 
-                Console.WriteLine($"{affineMatrix * point}");
+                Console.WriteLine($"{transformationMatrix * point}");
 
                 image = new Image<L8>(codeSideLength, codeSideLength);
 
                 for (int y = 0; y < outputSize; y++) {
                     for (int x = 0; x < outputSize; x++) {
                         // Map the output array coordinates to the original image using the affine transformation
-                        double originalX = affineMatrix[0, 0] * (x + 0.5) + affineMatrix[0, 1] * (y + 0.5) + affineMatrix[0, 2];
-                        double originalY = affineMatrix[1, 0] * (x + 0.5) + affineMatrix[1, 1] * (y + 0.5) + affineMatrix[1, 2];
+                        double originalX = transformationMatrix[0, 0] * (x + 0.5) + transformationMatrix[0, 1] * (y + 0.5) + transformationMatrix[0, 2];
+                        double originalY = transformationMatrix[1, 0] * (x + 0.5) + transformationMatrix[1, 1] * (y + 0.5) + transformationMatrix[1, 2];
 
                         int pixelX = (int)Math.Round(originalX);
                         int pixelY = (int)Math.Round(originalY);
@@ -237,7 +235,7 @@ namespace CodeReader {
                 return resampledImage;
             }
 
-            private static Matrix<double> CalculateAffineMatrix(QRFinderPatterns patterns, int sideLength) {
+            private static Matrix<double> CalculateTransformationMatrix(QRFinderPatterns patterns, int sideLength) {
                 double xTopLeft = patterns.TopLeftPattern.Centroid.XCoord;
                 double yTopLeft = patterns.TopLeftPattern.Centroid.YCoord;
                 double xTopRight = patterns.TopRightPattern.Centroid.XCoord;
