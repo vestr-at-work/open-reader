@@ -68,7 +68,7 @@ namespace CodeReader {
             }
         }
         
-        public static bool TryGetRawData<TPixel>(Image<TPixel> image, out RawQRData? rawDataMatrix) 
+        public static bool TryParseQRCode<TPixel>(Image<TPixel> image, out ParsedQRCode? rawDataMatrix) 
             where TPixel : unmanaged, IPixel<TPixel> {
 
             Stopwatch sw = new Stopwatch();
@@ -122,7 +122,7 @@ namespace CodeReader {
 
             
             // Dummy implementation
-            rawDataMatrix = new RawQRData();
+            rawDataMatrix = new ParsedQRCode();
             return true;
         }
 
@@ -707,7 +707,6 @@ namespace CodeReader {
             /// <param name="patterns"></param>
             /// <returns></returns>
             private static QRFinderPatternTrio DetermineFinderPatternRelations(QRFinderPatternTrioNotDetermined patternTrio) {
-                double[] angles = new double[3];
                 var angleByPattern1 = GetAdjacentAngle(patternTrio.Pattern1.Centroid, patternTrio.Pattern2.Centroid, patternTrio.Pattern3.Centroid);
                 var angleByPattern2 = GetAdjacentAngle(patternTrio.Pattern2.Centroid, patternTrio.Pattern1.Centroid, patternTrio.Pattern3.Centroid);
                 var angleByPattern3 = GetAdjacentAngle(patternTrio.Pattern3.Centroid, patternTrio.Pattern1.Centroid, patternTrio.Pattern2.Centroid);

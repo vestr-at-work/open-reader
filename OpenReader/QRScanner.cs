@@ -15,7 +15,7 @@ namespace CodeReader {
         public object? Data { get; init; }
     }
 
-    public class RawQRData {
+    public class ParsedQRCode {
         public int EstimatedVersion { get; set; }
         public int Size { get; set; }
         public byte[,]? Data {get; set; }
@@ -39,13 +39,13 @@ namespace CodeReader {
         /// <returns></returns>
         public ScanResult Scan<TPixel>(Image<TPixel> image) where TPixel : unmanaged, IPixel<TPixel> {
             
-            if (!QRImageProcessor.TryGetRawData(image, out RawQRData codeData)) {
+            if (!QRImageProcessor.TryParseQRCode(image, out ParsedQRCode QRCode)) {
                 return new ScanResult() { Success = false };
             }
-            if (!QRDecoder.TryGetFormatInfo(codeData, out ContentType dataType)) {
+            if (!QRDecoder.TryGetFormatInfo(QRCode, out ContentType dataType)) {
                 return new ScanResult() { Success = false };
             }
-            if (!QRDecoder.TryGetData(codeData, out object data)) {
+            if (!QRDecoder.TryGetData(QRCode, out object data)) {
                 return new ScanResult() { Success = false };
             }
 
