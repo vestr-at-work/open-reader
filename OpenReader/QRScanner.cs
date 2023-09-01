@@ -74,7 +74,7 @@ namespace CodeReader {
             if (!QRDecoder.TryGetFormatInfo(QRCode, out QRFormatInfo formatInfo)) {
                 return new ScanResult() { Success = false };
             }
-            if (!QRDecoder.TryGetData(QRCode, out ScanResult QRCodeResult)) {
+            if (!QRDecoder.TryGetData(QRCode, formatInfo, out ScanResult QRCodeResult)) {
                 return new ScanResult() { Success = false };
             }
 

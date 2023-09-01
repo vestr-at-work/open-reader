@@ -11,7 +11,7 @@ namespace CodeReader {
             return true;
         }
 
-        public static bool TryGetData(ParsedQRCode codeData, out ScanResult result) {
+        public static bool TryGetData(ParsedQRCode codeData, QRFormatInfo formatInfo, out ScanResult result) {
             
 
             // Dummy implementation
