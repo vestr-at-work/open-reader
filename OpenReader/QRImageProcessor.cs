@@ -81,6 +81,9 @@ namespace CodeReader {
             var binarizedImage = Commons.Binarize(image);
 
             if (!QRPatternFinder.TryGetFinderPatterns(binarizedImage, out QRFinderPatterns finderPatterns)) {
+                binarizedImage.Save("../TestData/QRCodeTestOUTPUT.png");
+                binarizedImage.Dispose();
+
                 rawDataMatrix = null;
                 return false;
             }
@@ -130,7 +133,7 @@ namespace CodeReader {
                 Vector2 fromTopLeftToTopRight = new Vector2(topRight.Centroid.XCoord - topLeft.Centroid.XCoord, topRight.Centroid.YCoord - topLeft.Centroid.YCoord);
                 int signSwitch = 1;
 
-                // If top left pattern to the right of the top right pattern in the image
+                // If top left pattern is to the right of the top right pattern in the image
                 if (patterns.TopLeftPattern.Centroid.XCoord > patterns.TopRightPattern.Centroid.XCoord) {
                     signSwitch = -1;
                 }
@@ -145,6 +148,12 @@ namespace CodeReader {
                 // If angle from width not within correct range recalculate with height.
                 // This means that top right finder pattern is much higher than top left finder patter.
                 if (angleAdjacentToOppositeSidePoint > (Math.PI / 4)) {
+
+                    // If top left pattern is to the bottom of the top right pattern in the image
+                    if (patterns.TopLeftPattern.Centroid.YCoord > patterns.TopRightPattern.Centroid.YCoord) {
+                        signSwitch = -1;
+                    }   
+
                     oppositeSidePoint = new PixelCoord(topLeft.Centroid.XCoord, topLeft.Centroid.YCoord - (signSwitch * (topLeft.EstimatedHeight / 2)));
                     adjacentSidePoint = new PixelCoord(topLeft.Centroid.XCoord, topLeft.Centroid.YCoord + (signSwitch * (topLeft.EstimatedHeight / 2)));
                     topRightReferencePoint = new PixelCoord(oppositeSidePoint.XCoord + (int)fromTopLeftToTopRight.X, oppositeSidePoint.YCoord + (int)fromTopLeftToTopRight.Y);
@@ -155,14 +164,14 @@ namespace CodeReader {
 
                 var scale = (((double)topRight.EstimatedWidth / topLeft.EstimatedWidth) + ((double)bottomLeft.EstimatedWidth / topLeft.EstimatedWidth)) / 2;
                 Console.WriteLine($"width: {hypotenuse}, scale: {scale}");
-                double patternWidth = Math.Cos(angleAdjacentToOppositeSidePoint) * hypotenuse; 
+                double patternSideLength = Math.Cos(angleAdjacentToOppositeSidePoint) * hypotenuse; 
                 rotationAngle = angleAdjacentToOppositeSidePoint;
-                return (patternWidth * scale) / 7;
+                return (patternSideLength * scale) / 7;
                 
             }
 
             /// <summary>
-            /// Estimates the version of the QR code based on the distance of the Finder pattens from each other and module size.
+            /// Estimates the version of the QR code based on the distance of the Finder patterns from each other and module size.
             /// Main method of the QRInfoExtractor class.
             /// </summary>
             /// <param name="patterns">Finder patterns.</param>
@@ -172,7 +181,9 @@ namespace CodeReader {
             public static int GetVersion(QRFinderPatterns patterns, double moduleSize, double rotationAngle) {
                 var topLeft = patterns.TopLeftPattern;
                 var topRight = patterns.TopRightPattern;
+
                 double version = (((topLeft.Centroid.DistanceFrom(topRight.Centroid) / moduleSize) * Math.Cos(rotationAngle) - 10) / 4);
+
                 Console.WriteLine(topLeft.Centroid.DistanceFrom(topRight.Centroid));
                 Console.WriteLine($"cos: {Math.Cos(rotationAngle)}, angle: {rotationAngle / (2 * Math.PI) * 360}, version: {version}");
 
@@ -203,13 +214,13 @@ namespace CodeReader {
                 Matrix<double> transformationMatrix = CalculateTransformationMatrix(patterns, codeSideLength);
                 byte[,] resampledImage = new byte[outputSize, outputSize];
 
-                var point = Matrix<double>.Build.DenseOfArray(new double[,] {
-                    { 3.5 },
-                    { 3.5 },
-                    { 1 }
-                });
+                // var point = Matrix<double>.Build.DenseOfArray(new double[,] {
+                //     { 3.5 },
+                //     { 3.5 },
+                //     { 1 }
+                // });
 
-                Console.WriteLine($"{transformationMatrix * point}");
+                // Console.WriteLine($"{transformationMatrix * point}");
 
                 image = new Image<L8>(codeSideLength, codeSideLength);
 
@@ -270,7 +281,7 @@ namespace CodeReader {
         static class QRPatternFinder {
             public static bool TryGetFinderPatterns(Image<L8> image, out QRFinderPatterns patterns) {
 
-                List<QRFinderPattern> potentialFinderPatterns = GetPotentialFinderPattern(image);
+                List<QRFinderPattern> finderPatterns = GetPotentialFinderPattern(image);
 
                 // // Debug print
                 // foreach (var pattern in potentialFinderPatterns) {
@@ -279,13 +290,17 @@ namespace CodeReader {
                 // Console.WriteLine("-----");
 
 
-                if (potentialFinderPatterns.Count < 3) {
+                if (finderPatterns.Count < 3) {
                     // Empty assingment
                     patterns = new QRFinderPatterns();
                     return false;
                 }
 
-                var finderPatterns = FilterFinderPatterns(potentialFinderPatterns);
+                if (!TryFilterFinderPatterns(ref finderPatterns)) {
+                    // Empty assingment
+                    patterns = new QRFinderPatterns();
+                    return false;
+                }
 
                 patterns = DetermineFinderPatternRelations(finderPatterns);
                 return true;
@@ -620,9 +635,14 @@ namespace CodeReader {
                 return finderPatternPixels;
             }
 
-            private static List<QRFinderPattern> FilterFinderPatterns(List<QRFinderPattern> patterns) {
+            private static bool TryFilterFinderPatterns(ref List<QRFinderPattern> patterns) {
                 var clusters = GetClustersBasedOnDistance(patterns, 5);
-                return GetThreeAvgPatternsFromMostPopulusClusters(clusters);
+                if (clusters.Count < 3) {
+                    return false;
+                }
+
+                patterns = GetThreeAvgPatternsFromMostPopulusClusters(clusters);
+                return true;
             }
 
             private static List<List<QRFinderPattern>> GetClustersBasedOnDistance(List<QRFinderPattern> patterns, int distanceThreshold) {
