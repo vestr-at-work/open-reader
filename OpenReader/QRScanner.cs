@@ -16,6 +16,12 @@ namespace CodeReader {
     }
 
     public class ParsedQRCode {
+        public ParsedQRCode(int version, int size, byte[,] data) {
+            EstimatedVersion = version;
+            Size = size;
+            Data = data;
+
+        }
         public int EstimatedVersion { get; set; }
         public int Size { get; set; }
         public byte[,]? Data {get; set; }

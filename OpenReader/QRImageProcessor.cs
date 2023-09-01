@@ -114,15 +114,13 @@ namespace CodeReader {
             Console.WriteLine($"time: {sw.Elapsed}");
 
             binarizedImage.Save("../TestData/QRCodeTestOUTPUT.png");
-            binarizedImage.Dispose();
-
             testImage.Save("../TestData/QRCodeTestResampledOUTPUT.png");
-            testImage.Dispose();
-            //image.Save("../TestData/QRCodeTest1OUTPUT.png");
 
+            binarizedImage.Dispose();
+            testImage.Dispose();
             
-            // Dummy implementation
-            rawDataMatrix = new ParsedQRCode();
+            var size = 17 + (4 * version);
+            rawDataMatrix = new ParsedQRCode(version, size, qrDataMatrix);
             return true;
         }
 
