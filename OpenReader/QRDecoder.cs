@@ -4,18 +4,18 @@ namespace CodeReader {
     /// Internal class encapsulating methods for decoding 
     /// </summary>
     class QRDecoder {
-        public static bool TryGetFormatInfo(ParsedQRCode codeData, out ContentType dataType) {
+        public static bool TryGetFormatInfo(ParsedQRCode codeData, out QRFormatInfo formatInfo) {
 
             // Dummy implementation
-            dataType = ContentType.Text;
+            formatInfo = new QRFormatInfo();
             return true;
         }
 
-        public static bool TryGetData(ParsedQRCode codeData, out object decodedData) {
+        public static bool TryGetData(ParsedQRCode codeData, out ScanResult result) {
             
 
             // Dummy implementation
-            decodedData = (object)"Hello World";
+            result = new ScanResult() {Success = true, DataType = ContentType.Text, Data = (object)"Hello World"};
             return true;
         }
     }

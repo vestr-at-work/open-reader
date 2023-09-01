@@ -15,6 +15,29 @@ namespace CodeReader {
         public object? Data { get; init; }
     }
 
+    public enum QRErrorCorrectionLevel {
+        L,
+        M,
+        Q,
+        H
+    }
+
+    public enum QRDataMask {
+        Mask0,
+        Mask1,
+        Mask2,
+        Mask3,
+        Mask4,
+        Mask5,
+        Mask6,
+        Mask7
+    }
+
+    public struct QRFormatInfo {
+        public QRErrorCorrectionLevel ErrorCorrectionLevel;
+        public QRDataMask DataMask;
+    }
+
     public class ParsedQRCode {
         public ParsedQRCode(int version, int size, byte[,] data) {
             EstimatedVersion = version;
@@ -48,14 +71,14 @@ namespace CodeReader {
             if (!QRImageProcessor.TryParseQRCode(image, out ParsedQRCode QRCode)) {
                 return new ScanResult() { Success = false };
             }
-            if (!QRDecoder.TryGetFormatInfo(QRCode, out ContentType dataType)) {
+            if (!QRDecoder.TryGetFormatInfo(QRCode, out QRFormatInfo formatInfo)) {
                 return new ScanResult() { Success = false };
             }
-            if (!QRDecoder.TryGetData(QRCode, out object data)) {
+            if (!QRDecoder.TryGetData(QRCode, out ScanResult QRCodeResult)) {
                 return new ScanResult() { Success = false };
             }
 
-            return new ScanResult() { Success = true, DataType = dataType, Data = data };
+            return QRCodeResult;
         }        
     }
 }
