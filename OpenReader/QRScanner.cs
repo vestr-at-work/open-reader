@@ -9,6 +9,17 @@ namespace CodeReader {
         Action
     }
 
+    public enum QRMode {
+        Numeric = 0b0001,
+        Alphanumeric = 0b0010,
+        Byte = 0b0100,
+        Kanji = 0b1000,
+        StructuredAppend = 0b0011,
+        ECI = 0b0111,
+        FNC1First = 0b0101,
+        FNC1Second = 0b1010
+    }
+
     public class ScanResult {
         public bool Success { get; init; }
         public ContentType? DataType { get; init; }
