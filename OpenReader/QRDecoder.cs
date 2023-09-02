@@ -11,7 +11,7 @@ namespace CodeReader {
         /// <param name="code">Parsed QR code.</param>
         /// <param name="formatInfo">Filled FormatInfo if sucessful, else empty FormatInfo.</param>
         /// <returns>true if successful, false if failed.</returns>
-        public static bool TryGetFormatInfo(ParsedQRCode code, out QRFormatInfo formatInfo) {
+        public static bool TryGetFormatInfo(QRCodeParsed code, out QRFormatInfo formatInfo) {
             ushort mainFormatInfoRawData = GetMainFormatInfoData(code);
             if (TryParseFormatInfo(mainFormatInfoRawData, out QRFormatInfo parsedFormatInfo)) {
 
@@ -30,7 +30,7 @@ namespace CodeReader {
             return false;
         }
 
-        public static bool TryGetData(ParsedQRCode codeData, QRFormatInfo formatInfo, out ScanResult result) {
+        public static bool TryGetData(QRCodeParsed codeData, QRFormatInfo formatInfo, out ScanResult result) {
             
 
             // Dummy implementation
@@ -43,7 +43,7 @@ namespace CodeReader {
         /// </summary>
         /// <param name="code">Parsed QR code.</param>
         /// <returns>15 bit format info in the MSb order in ushort type.</returns>
-        private static ushort GetMainFormatInfoData(ParsedQRCode code) {
+        private static ushort GetMainFormatInfoData(QRCodeParsed code) {
             var accesor = new FormatInfoAccesor(code.Data, code.Size, true);
             return GetFormatInfoAsNumber(accesor);
         }
@@ -54,7 +54,7 @@ namespace CodeReader {
         /// </summary>
         /// <param name="code">Parsed QR code.</param>
         /// <returns>15 bit format info in the MSb order in ushort type.</returns>
-        private static ushort GetSecondaryFormatInfoData(ParsedQRCode code) {
+        private static ushort GetSecondaryFormatInfoData(QRCodeParsed code) {
             var accesor = new FormatInfoAccesor(code.Data, code.Size, false);
             return GetFormatInfoAsNumber(accesor);
         }

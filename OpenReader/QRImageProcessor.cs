@@ -68,7 +68,7 @@ namespace CodeReader {
             }
         }
         
-        public static bool TryParseQRCode<TPixel>(Image<TPixel> image, out ParsedQRCode? rawDataMatrix) 
+        public static bool TryParseQRCode<TPixel>(Image<TPixel> image, out QRCodeParsed? rawDataMatrix) 
             where TPixel : unmanaged, IPixel<TPixel> {
 
             Stopwatch sw = new Stopwatch();
@@ -120,7 +120,7 @@ namespace CodeReader {
             testImage.Dispose();
             
             var size = 17 + (4 * version);
-            rawDataMatrix = new ParsedQRCode(version, size, qrDataMatrix);
+            rawDataMatrix = new QRCodeParsed(version, size, qrDataMatrix);
             return true;
         }
 
