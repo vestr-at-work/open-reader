@@ -1,44 +1,16 @@
 
 namespace CodeReader {
     /// <summary>
-    /// Internal class encapsulating methods for decoding QR code
+    /// Internal class encapsulating methods for decoding QR code.
+    /// Main public methods are 'TryGetFormatInfo' and 'TryGetData'.
     /// </summary>
     class QRDecoder {
-        private static ushort[] validFomatInfoSequences = {
-            0b000_0000_0000_0000,
-            0b000_0101_0011_0111,
-            0b000_1010_0110_1110,
-            0b000_1111_0101_1001,
-            0b001_0001_1110_1011,
-            0b001_0100_1101_1100,
-            0b001_1011_1000_0101,
-            0b001_1110_1011_0010,
-            0b010_0011_1101_0110,
-            0b010_0110_1110_0001,
-            0b010_1001_1011_1000,
-            0b010_1100_1000_1111,
-            0b011_0010_0011_1101,
-            0b011_0111_0000_1010,
-            0b011_1000_0101_0011,
-            0b011_1101_0110_0100,
-            0b100_0010_1001_1011,
-            0b100_0111_1010_1100,
-            0b100_1000_1111_0101,
-            0b100_1101_1100_0010,
-            0b101_0011_0111_0000,
-            0b101_0110_0100_0111,
-            0b101_1001_0001_1110,
-            0b101_1100_0010_1001,
-            0b110_0001_0100_1101,
-            0b110_0100_0111_1010,
-            0b110_1011_0010_0011,
-            0b110_1110_0001_0100,
-            0b111_0000_1010_0110,
-            0b111_0101_1001_0001,
-            0b111_1010_1100_1000,
-            0b111_1111_1111_1111
-        };
-
+        /// <summary>
+        /// Method for getting the format info (error correction level and data mask) from parsed QR code.
+        /// </summary>
+        /// <param name="code">Parsed QR code.</param>
+        /// <param name="formatInfo">Filled FormatInfo if sucessful, else empty FormatInfo.</param>
+        /// <returns>true if successful, false if failed.</returns>
         public static bool TryGetFormatInfo(ParsedQRCode code, out QRFormatInfo formatInfo) {
             ushort mainFormatInfoRawData = GetMainFormatInfoData(code);
             if (TryParseFormatInfo(mainFormatInfoRawData, out QRFormatInfo parsedFormatInfo)) {
@@ -66,11 +38,22 @@ namespace CodeReader {
             return true;
         }
 
+        /// <summary>
+        /// Gets the main format info data located around the top left finder pattern.
+        /// </summary>
+        /// <param name="code">Parsed QR code.</param>
+        /// <returns>15 bit format info in the MSb order in ushort type.</returns>
         private static ushort GetMainFormatInfoData(ParsedQRCode code) {
             var accesor = new FormatInfoAccesor(code.Data, code.Size, true);
             return GetFormatInfoAsNumber(accesor);
         }
 
+        /// <summary>
+        /// Gets the secondary (aka redundant) format info data located 
+        /// under the top right finder pattern and to the right of the bottom left finder pattern.
+        /// </summary>
+        /// <param name="code">Parsed QR code.</param>
+        /// <returns>15 bit format info in the MSb order in ushort type.</returns>
         private static ushort GetSecondaryFormatInfoData(ParsedQRCode code) {
             var accesor = new FormatInfoAccesor(code.Data, code.Size, false);
             return GetFormatInfoAsNumber(accesor);
@@ -93,17 +76,31 @@ namespace CodeReader {
 
         /// <summary>
         /// Private class for accesing the module values in the format info areas.
+        /// Main public method is itterator method 'GetFormatModules'.
         /// </summary>
         private class FormatInfoAccesor {
+            /// <summary>
+            /// FormatInfoAccesor Ctor.
+            /// </summary>
+            /// <param name="data">QR code data matrix.</param>
+            /// <param name="size">QR code size.</param>
+            /// <param name="isMain">Set true if accesor is accesing main format info, set flase if accesing secondary one.</param>
             public FormatInfoAccesor(byte[,] data, int size, bool isMain) {
                 _data = data;
                 _size = size;
                 _isMain = isMain;
             }
+            // True if accesor is accesing main format info, flase if accesing secondary one
             private bool _isMain;
+            // QR code data matrix
             private byte[,] _data;
+            // QR code size
             private int _size;
 
+            /// <summary>
+            /// Itterates over format info module values and yield returns them.
+            /// </summary>
+            /// <returns>Format info module values.</returns>
             public IEnumerable<byte> GetFormatModules() {
                 if (_isMain) {
                     int x = 8;
@@ -152,7 +149,7 @@ namespace CodeReader {
 
             ushort lowestDistance = ushort.MaxValue;
             ushort? closestValidFormatInfoSequence = null;
-            foreach (var validFormatInfoSequence in validFomatInfoSequences) {
+            foreach (var validFormatInfoSequence in _validFomatInfoSequences) {
                 ushort distanceInBinaryOnes = (ushort)(unmaskedData ^ validFormatInfoSequence);
                 ushort distance = GetNumberOfOnesInBinary(distanceInBinaryOnes);
 
@@ -192,5 +189,45 @@ namespace CodeReader {
 
             return oneCount;
         }
+
+
+        /// <summary>
+        /// Readonly list of all of the valid format info sequences. Bits in sequences are in MSb order.
+        /// </summary>
+        /// <value></value>
+        private static readonly ushort[] _validFomatInfoSequences = {
+            0b000_0000_0000_0000,
+            0b000_0101_0011_0111,
+            0b000_1010_0110_1110,
+            0b000_1111_0101_1001,
+            0b001_0001_1110_1011,
+            0b001_0100_1101_1100,
+            0b001_1011_1000_0101,
+            0b001_1110_1011_0010,
+            0b010_0011_1101_0110,
+            0b010_0110_1110_0001,
+            0b010_1001_1011_1000,
+            0b010_1100_1000_1111,
+            0b011_0010_0011_1101,
+            0b011_0111_0000_1010,
+            0b011_1000_0101_0011,
+            0b011_1101_0110_0100,
+            0b100_0010_1001_1011,
+            0b100_0111_1010_1100,
+            0b100_1000_1111_0101,
+            0b100_1101_1100_0010,
+            0b101_0011_0111_0000,
+            0b101_0110_0100_0111,
+            0b101_1001_0001_1110,
+            0b101_1100_0010_1001,
+            0b110_0001_0100_1101,
+            0b110_0100_0111_1010,
+            0b110_1011_0010_0011,
+            0b110_1110_0001_0100,
+            0b111_0000_1010_0110,
+            0b111_0101_1001_0001,
+            0b111_1010_1100_1000,
+            0b111_1111_1111_1111
+        };
     }
 }
