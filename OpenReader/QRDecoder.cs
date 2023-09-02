@@ -1,7 +1,7 @@
 
 namespace CodeReader {
     /// <summary>
-    /// Internal class encapsulating methods for decoding 
+    /// Internal class encapsulating methods for decoding QR code
     /// </summary>
     class QRDecoder {
         private static ushort[] validFomatInfoSequences = {
@@ -67,10 +67,12 @@ namespace CodeReader {
         }
 
         private static ushort GetMainFormatInfoData(ParsedQRCode code) {
-            var data = code.Data;
-            var size = code.Size;
+            var accesor = new FormatInfoAccesor(code.Data, code.Size, true);
+            return GetFormatInfoAsNumber(accesor);
+        }
 
-            var accesor = new FormatInfoAccesor(data, size, true);
+        private static ushort GetSecondaryFormatInfoData(ParsedQRCode code) {
+            var accesor = new FormatInfoAccesor(code.Data, code.Size, false);
             return GetFormatInfoAsNumber(accesor);
         }
 
@@ -81,12 +83,17 @@ namespace CodeReader {
                 if (module == 0) {
                     result |= oneAtOrder;
                 }
+
+                // Move to next order
                 oneAtOrder <<= 1;
             }
 
             return result;
         }
 
+        /// <summary>
+        /// Private class for accesing the module values in the format info areas.
+        /// </summary>
         private class FormatInfoAccesor {
             public FormatInfoAccesor(byte[,] data, int size, bool isMain) {
                 _data = data;
@@ -137,15 +144,6 @@ namespace CodeReader {
                     }
                 }
             }
-
-
-
-
-        }
-
-        private static ushort GetSecondaryFormatInfoData(ParsedQRCode code) {
-
-            return 0;
         }
 
         private static bool TryParseFormatInfo(ushort rawFormatInfoData, out QRFormatInfo parsedFormatInfo) {
