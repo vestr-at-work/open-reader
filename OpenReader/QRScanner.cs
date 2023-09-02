@@ -47,7 +47,7 @@ namespace CodeReader {
         }
         public int EstimatedVersion { get; set; }
         public int Size { get; set; }
-        public byte[,]? Data {get; set; }
+        public byte[,] Data {get; set; }
     }
 
 

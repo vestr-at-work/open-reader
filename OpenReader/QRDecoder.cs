@@ -67,8 +67,80 @@ namespace CodeReader {
         }
 
         private static ushort GetMainFormatInfoData(ParsedQRCode code) {
+            var data = code.Data;
+            var size = code.Size;
 
-            return 0b_000_0111_0100_1001 ^ 0b101010000010010;
+            var accesor = new FormatInfoAccesor(data, size, true);
+            return GetFormatInfoAsNumber(accesor);
+        }
+
+        private static ushort GetFormatInfoAsNumber(FormatInfoAccesor accesor) {
+            ushort result = 0;
+            ushort oneAtOrder = 1;
+            foreach(var module in accesor.GetFormatModules()) {
+                if (module == 0) {
+                    result |= oneAtOrder;
+                }
+                oneAtOrder <<= 1;
+            }
+
+            return result;
+        }
+
+        private class FormatInfoAccesor {
+            public FormatInfoAccesor(byte[,] data, int size, bool isMain) {
+                _data = data;
+                _size = size;
+                _isMain = isMain;
+            }
+            private bool _isMain;
+            private byte[,] _data;
+            private int _size;
+
+            public IEnumerable<byte> GetFormatModules() {
+                if (_isMain) {
+                    int x = 8;
+                    int y = 0;
+                    while (y < 8) {
+                        if (y == 6) {
+                            y++;
+                            continue;
+                        }
+
+                        yield return _data[x, y];
+                        y++;
+                    }
+
+                    while (x >= 0) {
+                        if (x == 6) {
+                            x--;
+                            continue;
+                        }
+
+                        yield return _data[x, y];
+                        x--;
+                    }
+                }
+                else {
+                    int x = _size - 1;
+                    int y = 7;
+                    while (x > _size - 1 - 8) {
+                        yield return _data[x, y];
+                        x--;
+                    }
+
+                    x = 8;
+                    y = _size - 1 - 7;
+                    while  (y < _size) {
+                        yield return _data[x, y];
+                        y++;
+                    }
+                }
+            }
+
+
+
+
         }
 
         private static ushort GetSecondaryFormatInfoData(ParsedQRCode code) {
