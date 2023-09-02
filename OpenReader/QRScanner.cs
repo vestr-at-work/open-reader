@@ -16,10 +16,10 @@ namespace CodeReader {
     }
 
     public enum QRErrorCorrectionLevel {
-        L,
-        M,
-        Q,
-        H
+        L = 0b01,
+        M = 0b00,
+        Q = 0b11,
+        H = 0b10
     }
 
     public enum QRDataMask {
