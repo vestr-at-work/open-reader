@@ -1,11 +1,5 @@
 
 namespace CodeReader {
-    public enum ContentType {
-        Text, 
-        Binary,
-        Action
-    }
-
     public enum QRMode {
         Numeric = 0b0001,
         Alphanumeric = 0b0010,
