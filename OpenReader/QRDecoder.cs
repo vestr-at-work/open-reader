@@ -42,28 +42,59 @@ namespace CodeReader {
         // "zig-zag" (two columns up then two columns down) fashion and returns modules unmasked.
         // Has to know about QR code parsed data, size, version, data mask.
         private class DataAreaAccesor {
+            private QRCodeParsed _code;
+            private QRDataMask _dataMask;
+
             public DataAreaAccesor(QRCodeParsed code, QRDataMask dataMask) {
                 _code = code;
                 _dataMask = dataMask;
             }
 
-            private QRCodeParsed _code;
-            private QRDataMask _dataMask;
+            public IEnumerable<byte> GetData() {
+
+                // Dummy implementation
+                yield return 0;
+            }
 
         }
 
-        // Completes whole 8bit words from unmasked module values and itterates over them.
+        /// <summary>
+        /// Class that completes 8-bit words from unmasked module values and itterates over them.
+        /// </summary>
         private class CodewordCompletor {
+            private DataAreaAccesor _dataAccesor;
+
             public CodewordCompletor(QRCodeParsed code, QRDataMask dataMask) {
                 _dataAccesor = new DataAreaAccesor(code, dataMask);
             }
 
-            private DataAreaAccesor _dataAccesor;
-
+            /// <summary>
+            /// Iterator method that yields all codewords in order.
+            /// </summary>
+            /// <returns>Codewords in order one by one.</returns>
             public IEnumerable<byte> GetCodewords() {
+                int moduleCount = 0;
+                byte nextByte = 0;
+                byte resultByte = 0;
+                foreach (byte module in _dataAccesor.GetData()) {
+                    moduleCount++;
 
-                // Dummy implementation
-                yield return 0;
+                    // Shift orders and add module value to least significant bit
+                    nextByte <<= 1;
+                    nextByte &= module;
+
+                    if (moduleCount == 8) {
+                        resultByte = nextByte;
+                        nextByte = 0;
+                        moduleCount = 0;
+                        yield return resultByte;
+                    }
+                }
+
+                // This should never happen when reading QR code data becouse of the alignment to 8-bit words.
+                if (moduleCount > 0) {
+                    throw new InvalidDataException("QR code data words not correctly aligned to 8 bits");
+                }
             }
         }
 
@@ -75,13 +106,13 @@ namespace CodeReader {
         // Has structures for data and error blocks. Gets codewords and places them in the correct block.
         // Has to know error correction level
         private class BlockManager {
+            private CodewordCompletor _codewordCompletor;
+            private CodewordErrorCorrector _codewordErrorCorrector;
+
             public BlockManager(QRCodeParsed code, QRFormatInfo formatInfo) {
                 _codewordCompletor = new CodewordCompletor(code, formatInfo.DataMask);
                 _codewordErrorCorrector = new CodewordErrorCorrector();
             }
-
-            private CodewordCompletor _codewordCompletor;
-            private CodewordErrorCorrector _codewordErrorCorrector;
         }
 
         // Takes corrected array of data codewords in order and divides them into segments 
