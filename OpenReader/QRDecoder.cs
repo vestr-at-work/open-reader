@@ -38,6 +38,41 @@ namespace CodeReader {
             return true;
         }
 
+        // Itterates over the QR code symbol in a "snake-like" (in two columns from right to left and back) 
+        // "zig-zag" (two columns up then two columns down) fashion and returns modules unmasked.
+        // Has to know about QR code parsed data, size, version, data mask.
+        private class DataAreaAccesor {
+
+        }
+
+        // Completes whole 8bit words from unmasked module values and itterates over them.
+        private class CodewordCompletor {
+            private DataAreaAccesor _dataAccesor;
+        }
+
+        // Takes data codeword and coresponding error codeword and returns corrected data or false or smthng
+        private class CodewordErrorCorrector {
+
+        }
+
+        // Has structures for data and error blocks. Gets codewords and places them in the correct block.
+        // Has to know error correction level
+        private class BlockManager {
+            private CodewordCompletor _codewordCompletor;
+            private CodewordErrorCorrector _codewordErrorCorrector;
+        }
+
+        // Takes corrected array of data codewords in order and divides them into segments 
+        // according to the mode indicators and character counts.
+        private class DataCodewordsSegmentor {
+
+        }
+
+        // Decodes different kinds of data according to the modes.
+        private class DataDecoder {
+
+        }
+
         /// <summary>
         /// Gets the main format info data located around the top left finder pattern.
         /// </summary>
@@ -164,6 +199,7 @@ namespace CodeReader {
                 return false;
             }
 
+            // To mask only the bits of interest
             ushort errorCorrectionLevelMask = 0b110_0000_0000_0000;
             ushort dataMaskMask = 0b001_1100_0000_0000;
 
