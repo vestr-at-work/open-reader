@@ -53,7 +53,33 @@ namespace CodeReader {
             }
 
             public IEnumerable<byte> GetData() {
-                
+                // Setup value so the first iteration is correct
+                bool isOddTwoModuleColumn = true;
+
+                // Column two modules wide and moving always from right to left
+                for (int i = _code.Size - 1; i > 0; i -= 2) {
+                    isOddTwoModuleColumn = !isOddTwoModuleColumn;
+                    for (int j = _code.Size - 1; j >= 0; j--) {
+                        int y = isOddTwoModuleColumn ? (_code.Size - 1) - j : j;
+                        
+                        for (int k = 0; k >= -1; k--) {
+                            int x = i + k;
+                            Point point = new Point(x, y);
+                            if (_checker.PointNotInDataArea(point)) {
+                                continue;
+                            }
+
+                            byte result = _code.Data[point.X, point.Y];
+                            if(_isPointOnMask(point)) {
+                                // TODO: Value 255 as value of white module should be some constant somewhere!!!
+                                result = (byte)(255 - result);
+                            }
+
+                            yield return result;
+                        }
+                    }
+                }
+
                 // Dummy implementation
                 yield return 0;
             }
@@ -147,7 +173,9 @@ namespace CodeReader {
 
                     // Shift orders and add module value to least significant bit
                     nextByte <<= 1;
-                    nextByte &= module;
+                    if (module == 0) {
+                        nextByte |= 1;
+                    }
 
                     if (moduleCount == 8) {
                         resultByte = nextByte;
