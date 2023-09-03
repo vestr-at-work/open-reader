@@ -601,7 +601,8 @@ namespace CodeReader {
                             continue;
                         }
 
-                        // Check vertical
+                        // Check vertical ---- TODO: SHOULD BE A FUNCTION
+
                         int centerOfMiddleBloc = finderExtractor.GetMiddleOfRowBlocs();
                         int checkVerticalY = y;
                         // Check blocs up
@@ -731,7 +732,6 @@ namespace CodeReader {
             }
 
             private static QRFinderPatternTrio GetFinalQRFinderPatterns(QRFinderPattern upperLeft, QRFinderPattern otherPatternA, QRFinderPattern otherPatternB) {
-
                 var crossProduct = ((otherPatternA.Centroid.XCoord - upperLeft.Centroid.XCoord) 
                                 * (otherPatternB.Centroid.YCoord - upperLeft.Centroid.YCoord))
                                 - ((otherPatternA.Centroid.YCoord - upperLeft.Centroid.YCoord) 

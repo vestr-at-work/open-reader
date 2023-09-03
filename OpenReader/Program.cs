@@ -12,7 +12,6 @@ namespace QRCodeReader {
                 result = scanner.Scan(image);
             }
             
-
             if (!result.Success) {
                 Console.WriteLine("QR code could not be decoded.");
             }
