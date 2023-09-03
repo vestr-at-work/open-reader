@@ -10,7 +10,7 @@ namespace CodeReader {
         /// </summary>
         /// <param name="code">Parsed QR code.</param>
         /// <param name="formatInfo">Filled FormatInfo if sucessful, else empty FormatInfo.</param>
-        /// <returns>true if successful, false if failed.</returns>
+        /// <returns>True if successful, false if failed.</returns>
         public static bool TryGetFormatInfo(QRCodeParsed code, out QRFormatInfo formatInfo) {
             ushort mainFormatInfoRawData = GetMainFormatInfoData(code);
             if (TryParseFormatInfo(mainFormatInfoRawData, out QRFormatInfo parsedFormatInfo)) {
@@ -43,23 +43,89 @@ namespace CodeReader {
         // Has to know about QR code parsed data, size, version, data mask.
         private class DataAreaAccesor {
             private QRCodeParsed _code;
-            private QRDataMask _dataMask;
+            private Predicate<Point> _isPointOnMask;
+            private DataAreaChecker _checker;
 
             public DataAreaAccesor(QRCodeParsed code, QRDataMask dataMask) {
                 _code = code;
-                _dataMask = dataMask;
+                _isPointOnMask = MaskDelegateFactory.GetMaskPredicate(dataMask);
+                _checker = new DataAreaChecker();
             }
 
             public IEnumerable<byte> GetData() {
-
+                
                 // Dummy implementation
                 yield return 0;
             }
 
+            /// <summary>
+            /// Private class for checking if point in QR code symbol is in data area.
+            /// Main public method is 'PointInDataArea'.
+            /// </summary>
+            private class DataAreaChecker {
+
+                /// <summary>
+                /// Checks if point is in QR code symbol data area.
+                /// </summary>
+                /// <param name="point">Point in the QR code symbol.</param>
+                /// <returns>True if coordinates in data area, else returns false.</returns>
+                public bool PointInDataArea(Point point) {
+                    
+                    // Dummy implementation
+                    return true;
+                }
+
+                /// <summary>
+                /// Checks if point is not in QR code symbol data area.
+                /// </summary>
+                /// <param name="point">Point in the QR code symbol.</param>
+                /// <returns>False if coordinates in data area, else returns true.</returns>
+                public bool PointNotInDataArea(Point point) {
+                    
+                    // Dummy implementation
+                    return true;
+                }
+            }
+
+            /// <summary>
+            /// Factory class for QR code data mask predicates.
+            /// Main public method is 'GetMaskPredicate'.
+            /// </summary>
+            private static class MaskDelegateFactory {
+                /// <summary>
+                /// Gets QR code data mask predicate that returns true if point on mask else returns false.
+                /// </summary>
+                /// <param name="mask">QR code data mask.</param>
+                /// <returns></returns>
+                public static Predicate<Point> GetMaskPredicate(QRDataMask mask) {
+                    switch(mask) {
+                        case QRDataMask.Mask0:
+                            return (Point p) => { return (p.X + p.Y) % 2 == 0; };
+                        case QRDataMask.Mask1:
+                            return (Point p) => { return (p.Y) % 2 == 0; };
+                        case QRDataMask.Mask2:
+                            return (Point p) => { return (p.X) % 3 == 0; };
+                        case QRDataMask.Mask3:
+                            return (Point p) => { return (p.X + p.Y) % 3 == 0; };
+                        case QRDataMask.Mask4:
+                            return (Point p) => { return ((p.X / (float)3) + (p.Y / (float)2)) % 2 is < 0.0001f and > -0.0001f; };
+                        case QRDataMask.Mask5:
+                            return (Point p) => { return ((p.X * p.Y) % 3) + ((p.X * p.Y) % 2) == 0; };
+                        case QRDataMask.Mask6:
+                            return (Point p) => { return (((p.X * p.Y) % 3) + ((p.X * p.Y) % 2)) % 2 == 0; };
+                        case QRDataMask.Mask7:
+                            return (Point p) => { return (((p.X * p.Y) % 3) + ((p.X + p.Y) % 2)) % 2 == 0; };
+                        default:
+                            // Can not happen if all masks implemented
+                            throw new NotSupportedException();
+                    }
+                }
+            }
         }
 
         /// <summary>
-        /// Class that completes 8-bit words from unmasked module values and itterates over them.
+        /// Class for completing 8-bit words from unmasked module values and returning them by iterator method.
+        /// Main public method of the class is 'GetCodewords'.
         /// </summary>
         private class CodewordCompletor {
             private DataAreaAccesor _dataAccesor;

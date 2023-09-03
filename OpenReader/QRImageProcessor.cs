@@ -10,26 +10,6 @@ namespace CodeReader {
     /// Primarily converts image data to raw 2D matrix data for better handeling.
     /// </summary>
     static class QRImageProcessor {
-
-        struct PixelCoord {
-            public PixelCoord(int x, int y) {
-                XCoord = x;
-                YCoord = y;
-            }
-
-            public int XCoord;
-            public int YCoord;
-
-            public double DistanceFrom(PixelCoord other) {
-                return Math.Sqrt(Math.Pow(this.XCoord - other.XCoord, 2) 
-                            + Math.Pow(this.YCoord - other.YCoord, 2));
-            }
-
-            public override string ToString() {
-                return $"XCoord: {XCoord}, YCoord: {YCoord}";
-            }
-        }
-
         struct QRFinderPatternTrio {
             public QRFinderPatternTrio(QRFinderPattern topLeft, QRFinderPattern topRight, QRFinderPattern bottomLeft) {
                 TopLeftPattern = topLeft;
@@ -53,12 +33,12 @@ namespace CodeReader {
         }
 
         struct QRFinderPattern {
-            public QRFinderPattern(PixelCoord centroid, int width, int height) {
+            public QRFinderPattern(Point centroid, int width, int height) {
                 Centroid = centroid;
                 EstimatedWidth = width;
                 EstimatedHeight = height;
             }
-            public PixelCoord Centroid;
+            public Point Centroid;
             public int EstimatedWidth;
             public int EstimatedHeight;
 
@@ -139,17 +119,17 @@ namespace CodeReader {
                 var topLeft = patterns.TopLeftPattern;
                 var topRight = patterns.TopRightPattern;
                 var bottomLeft = patterns.BottomLeftPattern;
-                Vector2 fromTopLeftToTopRight = new Vector2(topRight.Centroid.XCoord - topLeft.Centroid.XCoord, topRight.Centroid.YCoord - topLeft.Centroid.YCoord);
+                Vector2 fromTopLeftToTopRight = new Vector2(topRight.Centroid.X - topLeft.Centroid.X, topRight.Centroid.Y - topLeft.Centroid.Y);
                 int signSwitch = 1;
 
                 // If top left pattern is to the right of the top right pattern in the image
-                if (patterns.TopLeftPattern.Centroid.XCoord > patterns.TopRightPattern.Centroid.XCoord) {
+                if (patterns.TopLeftPattern.Centroid.X > patterns.TopRightPattern.Centroid.X) {
                     signSwitch = -1;
                 }
 
-                PixelCoord oppositeSidePoint = new PixelCoord(topLeft.Centroid.XCoord - (signSwitch * (topLeft.EstimatedWidth / 2)), topLeft.Centroid.YCoord);
-                PixelCoord adjacentSidePoint = new PixelCoord(topLeft.Centroid.XCoord + (signSwitch * (topLeft.EstimatedWidth / 2)), topLeft.Centroid.YCoord);
-                PixelCoord topRightReferencePoint = new PixelCoord(oppositeSidePoint.XCoord + (int)fromTopLeftToTopRight.X, oppositeSidePoint.YCoord + (int)fromTopLeftToTopRight.Y);
+                Point oppositeSidePoint = new Point(topLeft.Centroid.X - (signSwitch * (topLeft.EstimatedWidth / 2)), topLeft.Centroid.Y);
+                Point adjacentSidePoint = new Point(topLeft.Centroid.X + (signSwitch * (topLeft.EstimatedWidth / 2)), topLeft.Centroid.Y);
+                Point topRightReferencePoint = new Point(oppositeSidePoint.X + (int)fromTopLeftToTopRight.X, oppositeSidePoint.Y + (int)fromTopLeftToTopRight.Y);
                 var angleAdjacentToOppositeSidePoint = GetAdjacentAngle(oppositeSidePoint, adjacentSidePoint, topRightReferencePoint);
                 var hypotenuse = topLeft.EstimatedWidth;
                 
@@ -159,13 +139,13 @@ namespace CodeReader {
                 if (angleAdjacentToOppositeSidePoint > (Math.PI / 4)) {
 
                     // If top left pattern is to the bottom of the top right pattern in the image
-                    if (patterns.TopLeftPattern.Centroid.YCoord > patterns.TopRightPattern.Centroid.YCoord) {
+                    if (patterns.TopLeftPattern.Centroid.Y > patterns.TopRightPattern.Centroid.Y) {
                         signSwitch = -1;
                     }   
 
-                    oppositeSidePoint = new PixelCoord(topLeft.Centroid.XCoord, topLeft.Centroid.YCoord - (signSwitch * (topLeft.EstimatedHeight / 2)));
-                    adjacentSidePoint = new PixelCoord(topLeft.Centroid.XCoord, topLeft.Centroid.YCoord + (signSwitch * (topLeft.EstimatedHeight / 2)));
-                    topRightReferencePoint = new PixelCoord(oppositeSidePoint.XCoord + (int)fromTopLeftToTopRight.X, oppositeSidePoint.YCoord + (int)fromTopLeftToTopRight.Y);
+                    oppositeSidePoint = new Point(topLeft.Centroid.X, topLeft.Centroid.Y - (signSwitch * (topLeft.EstimatedHeight / 2)));
+                    adjacentSidePoint = new Point(topLeft.Centroid.X, topLeft.Centroid.Y + (signSwitch * (topLeft.EstimatedHeight / 2)));
+                    topRightReferencePoint = new Point(oppositeSidePoint.X + (int)fromTopLeftToTopRight.X, oppositeSidePoint.Y + (int)fromTopLeftToTopRight.Y);
                     angleAdjacentToOppositeSidePoint = GetAdjacentAngle(oppositeSidePoint, adjacentSidePoint, topRightReferencePoint);
                     hypotenuse = topLeft.EstimatedHeight;
                 }
@@ -256,12 +236,12 @@ namespace CodeReader {
             }
 
             private static Matrix<double> CalculateTransformationMatrix(QRFinderPatternTrio patterns, int sideLength) {
-                double xTopLeft = patterns.TopLeftPattern.Centroid.XCoord;
-                double yTopLeft = patterns.TopLeftPattern.Centroid.YCoord;
-                double xTopRight = patterns.TopRightPattern.Centroid.XCoord;
-                double yTopRight = patterns.TopRightPattern.Centroid.YCoord;
-                double xBottomLeft = patterns.BottomLeftPattern.Centroid.XCoord;
-                double yBottomLeft = patterns.BottomLeftPattern.Centroid.YCoord;
+                double xTopLeft = patterns.TopLeftPattern.Centroid.X;
+                double yTopLeft = patterns.TopLeftPattern.Centroid.Y;
+                double xTopRight = patterns.TopRightPattern.Centroid.X;
+                double yTopRight = patterns.TopRightPattern.Centroid.Y;
+                double xBottomLeft = patterns.BottomLeftPattern.Centroid.X;
+                double yBottomLeft = patterns.BottomLeftPattern.Centroid.Y;
 
                 Matrix<double> imagePointsMatrix = Matrix<double>.Build.DenseOfArray(new double[,] {
                     { xTopLeft, xTopRight, xBottomLeft },
@@ -626,7 +606,7 @@ namespace CodeReader {
                         if (finderExtractor.IsFinderPattern) {
                             //pixelSpan[(finderExtractor.GetMiddleOfColumnBlocs() * image.Width) + centerOfMiddleBloc].PackedValue = 200;
 
-                            var centroid = new PixelCoord(centerOfMiddleBloc, finderExtractor.GetMiddleOfColumnBlocs());
+                            var centroid = new Point(centerOfMiddleBloc, finderExtractor.GetMiddleOfColumnBlocs());
                             var pattern = new QRFinderPattern(centroid, finderExtractor.GetPatternWidth(), finderExtractor.GetPatternHeight());
                             finderPatternPixels.Add(pattern);
                         }
@@ -686,13 +666,13 @@ namespace CodeReader {
                     int sumHeight = 0;
                     foreach (var pattern in clusters[i]) {
                         count++;
-                        sumX += pattern.Centroid.XCoord;
-                        sumY += pattern.Centroid.YCoord;
+                        sumX += pattern.Centroid.X;
+                        sumY += pattern.Centroid.Y;
                         sumWidth += pattern.EstimatedWidth;
                         sumHeight += pattern.EstimatedHeight;
                     }
 
-                    var averageCentroid = new PixelCoord(sumX / count, sumY / count);
+                    var averageCentroid = new Point(sumX / count, sumY / count);
                     var clusterAveragePattern = new QRFinderPattern(averageCentroid, sumWidth / count, sumHeight / count);
                     finderPatternTrio[i] = (clusterAveragePattern);   
                 }
@@ -732,10 +712,10 @@ namespace CodeReader {
             }
 
             private static QRFinderPatternTrio GetFinalQRFinderPatterns(QRFinderPattern upperLeft, QRFinderPattern otherPatternA, QRFinderPattern otherPatternB) {
-                var crossProduct = ((otherPatternA.Centroid.XCoord - upperLeft.Centroid.XCoord) 
-                                * (otherPatternB.Centroid.YCoord - upperLeft.Centroid.YCoord))
-                                - ((otherPatternA.Centroid.YCoord - upperLeft.Centroid.YCoord) 
-                                * (otherPatternB.Centroid.XCoord - upperLeft.Centroid.XCoord));
+                var crossProduct = ((otherPatternA.Centroid.X - upperLeft.Centroid.X) 
+                                * (otherPatternB.Centroid.Y - upperLeft.Centroid.Y))
+                                - ((otherPatternA.Centroid.Y - upperLeft.Centroid.Y) 
+                                * (otherPatternB.Centroid.X - upperLeft.Centroid.X));
 
                 if (crossProduct > 0) {
                     return new QRFinderPatternTrio(upperLeft, otherPatternA, otherPatternB);
@@ -753,9 +733,9 @@ namespace CodeReader {
         /// <param name="secondaryVertexA"></param>
         /// <param name="secondaryVertexB"></param>
         /// <returns>Adjacent angle in radians.</returns>
-        private static double GetAdjacentAngle(PixelCoord mainVertex, PixelCoord secondaryVertexA, PixelCoord secondaryVertexB) {
-            Vector2 mainToA = new Vector2(secondaryVertexA.XCoord - mainVertex.XCoord, secondaryVertexA.YCoord - mainVertex.YCoord);
-            Vector2 mainToB = new Vector2(secondaryVertexB.XCoord - mainVertex.XCoord, secondaryVertexB.YCoord - mainVertex.YCoord);
+        private static double GetAdjacentAngle(Point mainVertex, Point secondaryVertexA, Point secondaryVertexB) {
+            Vector2 mainToA = new Vector2(secondaryVertexA.X - mainVertex.X, secondaryVertexA.Y - mainVertex.Y);
+            Vector2 mainToB = new Vector2(secondaryVertexB.X - mainVertex.X, secondaryVertexB.Y - mainVertex.Y);
 
             return Math.Acos((Vector2.Dot(mainToA, mainToB) / (double)(mainToA.Length() * mainToB.Length())));
         }
