@@ -42,12 +42,29 @@ namespace CodeReader {
         // "zig-zag" (two columns up then two columns down) fashion and returns modules unmasked.
         // Has to know about QR code parsed data, size, version, data mask.
         private class DataAreaAccesor {
+            public DataAreaAccesor(QRCodeParsed code, QRDataMask dataMask) {
+                _code = code;
+                _dataMask = dataMask;
+            }
+
+            private QRCodeParsed _code;
+            private QRDataMask _dataMask;
 
         }
 
         // Completes whole 8bit words from unmasked module values and itterates over them.
         private class CodewordCompletor {
+            public CodewordCompletor(QRCodeParsed code, QRDataMask dataMask) {
+                _dataAccesor = new DataAreaAccesor(code, dataMask);
+            }
+
             private DataAreaAccesor _dataAccesor;
+
+            public IEnumerable<byte> GetCodewords() {
+
+                // Dummy implementation
+                yield return 0;
+            }
         }
 
         // Takes data codeword and coresponding error codeword and returns corrected data or false or smthng
@@ -58,6 +75,11 @@ namespace CodeReader {
         // Has structures for data and error blocks. Gets codewords and places them in the correct block.
         // Has to know error correction level
         private class BlockManager {
+            public BlockManager(QRCodeParsed code, QRFormatInfo formatInfo) {
+                _codewordCompletor = new CodewordCompletor(code, formatInfo.DataMask);
+                _codewordErrorCorrector = new CodewordErrorCorrector();
+            }
+
             private CodewordCompletor _codewordCompletor;
             private CodewordErrorCorrector _codewordErrorCorrector;
         }
