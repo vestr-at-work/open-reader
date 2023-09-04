@@ -31,7 +31,10 @@ namespace CodeReader {
         }
 
         public static bool TryGetData(QRCodeParsed codeData, QRFormatInfo formatInfo, out ScanResult result) {
-            
+            var completor = new CodewordCompletor(codeData, formatInfo.DataMask);
+            foreach (var block in completor.GetCodewords()) {
+
+            }
 
             // Dummy implementation
             result = new ScanResult() {Success = true, DataType = ContentType.Text, Data = (object)"Dummy implementation string"};
@@ -49,7 +52,7 @@ namespace CodeReader {
             public DataAreaAccesor(QRCodeParsed code, QRDataMask dataMask) {
                 _code = code;
                 _isPointOnMask = MaskDelegateFactory.GetMaskPredicate(dataMask);
-                _checker = new DataAreaChecker();
+                _checker = DataAreaCheckerFactory.GetChecker(code.Size, code.Version);
             }
 
             public IEnumerable<byte> GetData() {
@@ -82,20 +85,108 @@ namespace CodeReader {
                 }
             }
 
+            private static class DataAreaCheckerFactory {
+                public static DataAreaChecker GetChecker(int codeSize, int codeVersion) {
+                    var functionAreaPoints = new HashSet<Point>();
+
+                    functionAreaPoints.UnionWith(GetFunctionalPointsCommonForAllVersions(codeSize));
+
+                    if (codeVersion > 6) {
+                        functionAreaPoints.UnionWith(GetVersionInfoPoints(codeSize));
+                    }
+
+                    if (codeVersion > 1) {
+                        functionAreaPoints.UnionWith(GetAlignmentPatternPoints(codeVersion));
+                    }
+
+                    return new DataAreaChecker(functionAreaPoints);
+                }
+
+                private static HashSet<Point> GetAlignmentPatternPoints(int version) {
+                    var alignmentPatternPoints = new HashSet<Point>();
+
+                    // Dummy implementation
+                    return alignmentPatternPoints;
+                }
+
+                private static HashSet<Point> GetVersionInfoPoints(int codeSize) {
+                    var versionInfoPoints = new HashSet<Point>();
+
+                    // Top right version info
+                    for (int j = 0; j < 6; j++) {
+                        for (int i = (codeSize - 1) - 11; i < (codeSize - 1) - 8; i++) {
+                            versionInfoPoints.Add(new Point(i, j));
+                        }
+                    }
+
+                    // Bottom left version info
+                    for (int j = (codeSize - 1) - 11; j < (codeSize - 1) - 8; j++) {
+                        for (int i = 0; i < 6; i++) {
+                            versionInfoPoints.Add(new Point(i, j));
+                        }
+                    }
+
+                    return versionInfoPoints;
+                }
+
+                private static HashSet<Point> GetFunctionalPointsCommonForAllVersions(int codeSize) {
+                    var commonFunctionalPoints = new HashSet<Point>();
+
+                    // Top left pattern and top left main format info
+                    for (int j = 0; j < 9; j++) {
+                        for (int i = 0; i < 9; i++) {
+                            commonFunctionalPoints.Add(new Point(i, j));
+                        }
+                    }
+
+                    // Top right pattern and top right part of secondary format info
+                    for (int j = 0; j < 9; j++) {
+                        for (int i = (codeSize - 1) - 7; i < codeSize; i++) {
+                            commonFunctionalPoints.Add(new Point(i, j));
+                        }
+                    }
+
+                    // Bottom left pattern and bottom left part of secondary format info
+                    for (int j = (codeSize - 1) - 7; j < codeSize; j++) {
+                        for (int i = 0; i < 9; i++) {
+                            commonFunctionalPoints.Add(new Point(i, j));
+                        }
+                    }
+
+                    // Vertical timing pattern
+                    int x = 6;
+                    for (int j = 8; j < (codeSize - 1) - 8; j++) {
+                        commonFunctionalPoints.Add(new Point(x, j));
+                    }
+
+                    // Horizontal timing pattern
+                    int y = 6;
+                    for (int i = 8; i < (codeSize - 1) - 8; i++) {
+                        commonFunctionalPoints.Add(new Point(i, y));
+                    }
+
+                    return commonFunctionalPoints;
+                }
+            }
+
             /// <summary>
             /// Private class for checking if point in QR code symbol is in data area.
             /// Main public method is 'PointInDataArea'.
             /// </summary>
             private class DataAreaChecker {
+                private HashSet<Point> _functionAreaPoints;
+
+                public DataAreaChecker(HashSet<Point> functionAreaPoints) {
+                    _functionAreaPoints = functionAreaPoints;
+                }
+
                 /// <summary>
                 /// Checks if point is in QR code symbol data area.
                 /// </summary>
                 /// <param name="point">Point in the QR code symbol.</param>
                 /// <returns>True if coordinates in data area, else returns false.</returns>
                 public bool PointInDataArea(Point point) {
-                    
-                    // Dummy implementation
-                    return true;
+                    return _functionAreaPoints.TryGetValue(point, out Point _);
                 }
 
                 /// <summary>
