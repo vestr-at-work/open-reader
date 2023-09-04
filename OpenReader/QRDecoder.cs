@@ -38,8 +38,8 @@ namespace CodeReader {
             return true;
         }
 
-        // Itterates over the QR code symbol in a "snake-like" (in two columns from right to left and back) 
-        // "zig-zag" (two columns up then two columns down) fashion and returns modules unmasked.
+        // Itterates over the QR code symbol in a "zig-zag" (in two columns from right to left) 
+        // "snake-like" (two-module column up then two-module column down) fashion and returns modules unmasked.
         // Has to know about QR code parsed data, size, version, data mask.
         private class DataAreaAccesor {
             private QRCodeParsed _code;
@@ -56,12 +56,13 @@ namespace CodeReader {
                 // Setup value so the first iteration is correct
                 bool isOddTwoModuleColumn = true;
 
-                // Column two modules wide and moving always from right to left
+                // Moving column two modules wide from right to left 
+                // and within too moving always from right module to the left
                 for (int i = _code.Size - 1; i > 0; i -= 2) {
                     isOddTwoModuleColumn = !isOddTwoModuleColumn;
                     for (int j = _code.Size - 1; j >= 0; j--) {
                         int y = isOddTwoModuleColumn ? (_code.Size - 1) - j : j;
-                        
+
                         for (int k = 0; k >= -1; k--) {
                             int x = i + k;
                             Point point = new Point(x, y);
@@ -70,18 +71,15 @@ namespace CodeReader {
                             }
 
                             byte result = _code.Data[point.X, point.Y];
-                            if(_isPointOnMask(point)) {
-                                // TODO: Value 255 as value of white module should be some constant somewhere!!!
-                                result = (byte)(255 - result);
-                            }
+
+                            // If on mask switch value
+                            // TODO: Value 255 as value of white module should be some constant somewhere!!!
+                            result = _isPointOnMask(point) ? (byte)(255 - result) : result;
 
                             yield return result;
                         }
                     }
                 }
-
-                // Dummy implementation
-                yield return 0;
             }
 
             /// <summary>
@@ -89,7 +87,6 @@ namespace CodeReader {
             /// Main public method is 'PointInDataArea'.
             /// </summary>
             private class DataAreaChecker {
-
                 /// <summary>
                 /// Checks if point is in QR code symbol data area.
                 /// </summary>
@@ -107,9 +104,7 @@ namespace CodeReader {
                 /// <param name="point">Point in the QR code symbol.</param>
                 /// <returns>False if coordinates in data area, else returns true.</returns>
                 public bool PointNotInDataArea(Point point) {
-                    
-                    // Dummy implementation
-                    return true;
+                    return !PointInDataArea(point);
                 }
             }
 
