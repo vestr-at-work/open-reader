@@ -99,13 +99,35 @@ namespace CodeReader {
                         functionAreaPoints.UnionWith(GetAlignmentPatternPoints(codeVersion));
                     }
 
+                    foreach (var point in functionAreaPoints) {
+                        Console.WriteLine(point);
+                    }
+
                     return new DataAreaChecker(functionAreaPoints);
                 }
 
                 private static HashSet<Point> GetAlignmentPatternPoints(int version) {
                     var alignmentPatternPoints = new HashSet<Point>();
+                    var alignmentPatternInfo = _alignmentPatternCountAndCoordsByVersion[version];
+                    int[] patternCoords = alignmentPatternInfo.rowColumnCoordinates;
 
-                    // Dummy implementation
+                    for (int l = 0; l < patternCoords.Length; l++) {
+                        for (int k = 0; k < patternCoords.Length; k++) {
+                            if ((k == 0 && l == 0) || (k == 0 && l == patternCoords.Length - 1) || 
+                                (l == 0 && k == patternCoords.Length - 1)) {
+                                continue;
+                            }
+
+                            int patternCentroidX = patternCoords[k];
+                            int patternCentroidY = patternCoords[l];
+                            for (int j = -2; j < 3; j++) {
+                                for (int i = -2; i < 3; i++) {
+                                    alignmentPatternPoints.Add(new Point(patternCentroidX + i, patternCentroidY + j));
+                                }
+                            }
+                        }
+                    }
+                    
                     return alignmentPatternPoints;
                 }
 
@@ -269,11 +291,6 @@ namespace CodeReader {
                         moduleCount = 0;
                         yield return resultByte;
                     }
-                }
-
-                // This should never happen when reading QR code data becouse of the alignment to 8-bit words.
-                if (moduleCount > 0) {
-                    throw new InvalidDataException("QR code data words not correctly aligned to 8 bits");
                 }
             }
         }
@@ -497,6 +514,53 @@ namespace CodeReader {
             0b111_0101_1001_0001,
             0b111_1010_1100_1000,
             0b111_1111_1111_1111
+        };
+
+        private static readonly (int count, int[] rowColumnCoordinates)[] _alignmentPatternCountAndCoordsByVersion = {
+            // Version 0 does not exist
+            (0, new int[0]),
+            // Version 1 does not have alignment patterns
+            (0, new int[0]),
+            // Version 2
+            (1, new int[] {6, 18}),
+            // Version 3
+            (1, new int[] {6, 22}),
+            // Version 4
+            (1, new int[] {6, 26}),
+            // Version 5
+            (1, new int[] {6, 30}),
+            // Version 6
+            (1, new int[] {6, 34}),
+            // Version 7
+            (6, new int[] {6, 22, 38}),
+            // Version 8
+            (6, new int[] {6, 24, 42}),
+            // Version 9
+            (6, new int[] {6, 26, 46}),
+            // Version 10
+            (6, new int[] {6, 28, 50}),
+            // Version 11
+            (6, new int[] {6, 30, 54}),
+            // Version 12
+            (6, new int[] {6, 32, 58}),
+            // Version 13
+            (6, new int[] {6, 34, 62}),
+            // Version 14
+            (13, new int[] {6, 26, 46, 66}),
+            // Version 15
+            (13, new int[] {6, 26, 48, 70}),
+            // Version 16
+            (13, new int[] {6, 26, 50, 74}),
+            // Version 17
+            (13, new int[] {6, 30, 52, 78}),
+            // Version 18
+            (13, new int[] {6, 30, 54, 82}),
+            // Version 19
+            (13, new int[] {6, 30, 56, 86}),
+            // Version 20
+            (13, new int[] {6, 33, 58, 90}),
+            
+            // TODO: Complete the data to version 40!!!!
         };
     }
 }
