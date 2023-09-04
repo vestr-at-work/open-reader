@@ -1,4 +1,6 @@
 
+using MathNet.Numerics;
+
 namespace CodeReader {
     /// <summary>
     /// Internal class encapsulating methods for decoding QR code.
@@ -32,9 +34,13 @@ namespace CodeReader {
 
         public static bool TryGetData(QRCodeParsed codeData, QRFormatInfo formatInfo, out ScanResult result) {
             var completor = new CodewordCompletor(codeData, formatInfo.DataMask);
+            int i = 0;
             foreach (var block in completor.GetCodewords()) {
-
+                Console.WriteLine(Convert.ToString(block, 2));
+                i++;
             }
+
+            Console.WriteLine(i);
 
             // Dummy implementation
             result = new ScanResult() {Success = true, DataType = ContentType.Text, Data = (object)"Dummy implementation string"};
@@ -99,15 +105,20 @@ namespace CodeReader {
                         functionAreaPoints.UnionWith(GetAlignmentPatternPoints(codeVersion));
                     }
 
-                    foreach (var point in functionAreaPoints) {
-                        Console.WriteLine(point);
-                    }
+                    // foreach (var point in functionAreaPoints) {
+                    //     Console.WriteLine(point);
+                    // }
 
                     return new DataAreaChecker(functionAreaPoints);
                 }
 
                 private static HashSet<Point> GetAlignmentPatternPoints(int version) {
                     var alignmentPatternPoints = new HashSet<Point>();
+
+                    if (version >= _alignmentPatternCountAndCoordsByVersion.Length) {
+                        throw new InvalidParameterException(version);
+                    }
+
                     var alignmentPatternInfo = _alignmentPatternCountAndCoordsByVersion[version];
                     int[] patternCoords = alignmentPatternInfo.rowColumnCoordinates;
 
@@ -208,7 +219,7 @@ namespace CodeReader {
                 /// <param name="point">Point in the QR code symbol.</param>
                 /// <returns>True if coordinates in data area, else returns false.</returns>
                 public bool PointInDataArea(Point point) {
-                    return _functionAreaPoints.TryGetValue(point, out Point _);
+                    return !_functionAreaPoints.TryGetValue(point, out Point _);
                 }
 
                 /// <summary>
@@ -275,7 +286,7 @@ namespace CodeReader {
             public IEnumerable<byte> GetCodewords() {
                 int moduleCount = 0;
                 byte nextByte = 0;
-                byte resultByte = 0;
+                byte resultByte;
                 foreach (byte module in _dataAccesor.GetData()) {
                     moduleCount++;
 
@@ -291,6 +302,10 @@ namespace CodeReader {
                         moduleCount = 0;
                         yield return resultByte;
                     }
+                }
+
+                if (moduleCount > 0) {
+                    yield return (byte)(nextByte << (8 - moduleCount));
                 }
             }
         }
