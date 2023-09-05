@@ -12,11 +12,15 @@ namespace QRCodeReader {
                 result = scanner.Scan(image);
             }
             
-            if (!result.Success) {
+            if (!result.Success || result.DecodedData is null) {
                 Console.WriteLine("QR code could not be decoded.");
+                return;
             }
 
-            Console.WriteLine($"result: {result.Data}");
+            foreach (var data in result.DecodedData) {
+                Console.WriteLine($"result: {data.Data}");
+            }
+            
         }
     }
 }

@@ -3,12 +3,6 @@ using CodeReaderCommons;
 using System.Diagnostics;
 
 namespace CodeReader {
-    public struct ScanResult {
-        public bool Success { get; init; }
-        public ContentType? DataType { get; init; }
-        public object? Data { get; init; }
-    }
-
     /// <summary>
     /// Main class responsible for scanning and decoding QR codes.
     /// </summary>
@@ -34,5 +28,15 @@ namespace CodeReader {
 
             return QRCodeResult;
         }        
+    }
+
+    public struct ScanResult {
+        public bool Success { get; init; }
+        public IEnumerable<DecodedData>? DecodedData { get; init; }
+    }
+
+    public struct DecodedData {
+        public ContentType DataType { get; init; }
+        public object Data {get; init; }
     }
 }

@@ -43,7 +43,7 @@ namespace CodeReader {
             Console.WriteLine(i);
 
             // Dummy implementation
-            result = new ScanResult() {Success = true, DataType = ContentType.Text, Data = (object)"Dummy implementation string"};
+            result = new ScanResult() {Success = true, DecodedData = new List<DecodedData>()};
             return true;
         }
 
@@ -396,12 +396,15 @@ namespace CodeReader {
             /// <param name="dataCodewords">Sorted array of error corrected data codewords.</param>
             /// <returns>List of DataSegments present in the data codewords.</returns>
             public static List<DataSegment> SegmentByMode(byte[] dataCodewords) {
-
+                
+                // Dummy implementation
+                return new List<DataSegment>();
             }
         }
 
         // Decodes different kinds of data according to the modes.
         private class DataDecoder {
+
 
         }
 
@@ -646,6 +649,11 @@ namespace CodeReader {
         };
     
         private class DataSegment {
+            public DataSegment(QRMode mode, int validBits, byte[] data) {
+                DecodeMode = mode;
+                ValidBits = validBits;
+                Data = data;
+            }
             public QRMode DecodeMode { get; init; }
             public int ValidBits { get; init; }
             public byte[] Data { get; init; }
