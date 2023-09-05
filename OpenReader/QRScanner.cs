@@ -17,13 +17,13 @@ namespace CodeReader {
         public ScanResult Scan<TPixel>(Image<TPixel> image) where TPixel : unmanaged, IPixel<TPixel> {
             
             if (!QRImageProcessor.TryParseQRCode(image, out QRCodeParsed? QRCode)) {
-                return new ScanResult() { Success = false };
+                return new ScanResult() { Success = false, ErrorMessage = "Could not recognize QR code symbol in the image" };
             }
             if (!QRDecoder.TryGetFormatInfo((QRCodeParsed)QRCode!, out QRFormatInfo formatInfo)) {
-                return new ScanResult() { Success = false };
+                return new ScanResult() { Success = false, ErrorMessage = "Could not load format info from the QR code symbol. Possibly too corrupted image." };
             }
             if (!QRDecoder.TryGetData((QRCodeParsed)QRCode!, formatInfo, out ScanResult QRCodeResult)) {
-                return new ScanResult() { Success = false };
+                return new ScanResult() { Success = false, ErrorMessage = "Could not load QR code data properly. Possibly too corrupted image." };
             }
 
             return QRCodeResult;
@@ -32,6 +32,8 @@ namespace CodeReader {
 
     public struct ScanResult {
         public bool Success { get; init; }
+        // Should be null if Success is true.
+        public string? ErrorMessage { get; init; }
         public IEnumerable<DecodedData>? DecodedData { get; init; }
     }
 

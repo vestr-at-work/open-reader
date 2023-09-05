@@ -403,7 +403,6 @@ namespace CodeReader {
             }
         }
 
-        // Decodes different kinds of data according to the modes.
         private static class DataDecoder {
 
             /// <summary>
