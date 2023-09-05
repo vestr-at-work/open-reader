@@ -22,11 +22,11 @@ namespace CodeReader {
             if (!QRDecoder.TryGetFormatInfo((QRCodeParsed)QRCode!, out QRFormatInfo formatInfo)) {
                 return new ScanResult() { Success = false, ErrorMessage = "Could not load format info from the QR code symbol. Possibly too corrupted image." };
             }
-            if (!QRDecoder.TryGetData((QRCodeParsed)QRCode!, formatInfo, out ScanResult QRCodeResult)) {
+            if (!QRDecoder.TryGetData((QRCodeParsed)QRCode!, formatInfo, out List<DecodedData> decodedData)) {
                 return new ScanResult() { Success = false, ErrorMessage = "Could not load QR code data properly. Possibly too corrupted image." };
             }
 
-            return QRCodeResult;
+            return new ScanResult() {Success = true, DecodedData = decodedData};
         }        
     }
 

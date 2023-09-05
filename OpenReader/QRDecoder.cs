@@ -33,18 +33,34 @@ namespace CodeReader {
             return false;
         }
 
-        public static bool TryGetData(QRCodeParsed codeData, QRFormatInfo formatInfo, out ScanResult result) {
-            var completor = new CodewordCompletor(codeData, formatInfo.DataMask);
-            int i = 0;
-            foreach (var block in completor.GetCodewords()) {
-                Console.WriteLine(Convert.ToString(block, 2));
-                i++;
+        public static bool TryGetData(QRCodeParsed codeData, QRFormatInfo formatInfo, out List<DecodedData> decodedData) {
+            var codewordManager = new CodewordManager(codeData, formatInfo);
+            // int i = 0;
+            // foreach (var block in completor.GetCodewords()) {
+            //     Console.WriteLine(Convert.ToString(block, 2));
+            //     i++;
+            // }
+            if (!codewordManager.TryGetDataCodewords(out byte[] dataCodewords)) {
+                decodedData = new List<DecodedData>();
+                return false;
             }
 
-            Console.WriteLine(i);
+            if (!DataCodewordSegmenter.SegmentByMode(dataCodewords, out List<DataSegment> dataSegments)) {
+                decodedData = new List<DecodedData>();
+                return false;
+            } 
 
-            // Dummy implementation
-            result = new ScanResult() {Success = true, DecodedData = new List<DecodedData>()};
+            decodedData = new List<DecodedData>();
+
+            foreach (var segment in dataSegments) {
+                if (!DataDecoder.TryDecode(segment, out DecodedData data)) {
+                    decodedData = new List<DecodedData>();
+                    return false;
+                }
+
+                decodedData.Add(data);
+            }
+            
             return true;
         }
 
@@ -316,8 +332,6 @@ namespace CodeReader {
 
         }
 
-        // Has structures for data and error blocks. Gets codewords and places them in the correct block.
-        // Has to know error correction level
         private class CodewordManager {
             private CodewordCompletor _codewordCompletor;
             private CodewordErrorCorrector _codewordErrorCorrector;
@@ -334,15 +348,20 @@ namespace CodeReader {
                 _errorCorrectionBlocks = InicializeErrorCorrectionBlocks(code.Version, formatInfo.ErrorCorrectionLevel);
             }
 
-            public bool TryGetDataCodewords(out byte[] dataCodewords) {
+            /// <summary>
+            /// Tries to get error corrected and sorted data codewords.
+            /// </summary>
+            /// <param name="result">Data codewords if successful, otherwise empty asignment</param>
+            /// <returns>True if successful, otherwise false.</returns>
+            public bool TryGetDataCodewords(out byte[] result) {
                 FillBlocksWithCodewords();
                 
                 if (!TryCorrectErrors()) {
-                    dataCodewords = new byte[0];
+                    result = new byte[0];
                     return false;
                 }
 
-                dataCodewords = GetDataCodewordsInOrder();
+                result = GetDataCodewordsInOrder();
                 return true;
             }
 
@@ -391,15 +410,17 @@ namespace CodeReader {
         private static class DataCodewordSegmenter {
             
             /// <summary>
-            /// Takes sorted array of data codewords and divides them into DataSegments 
+            /// Takes sorted array of data codewords and tries to divides them into DataSegments 
             /// according to the mode indicators and character counts.
             /// </summary>
             /// <param name="dataCodewords">Sorted array of error corrected data codewords.</param>
-            /// <returns>List of DataSegments present in the data codewords.</returns>
-            public static List<DataSegment> SegmentByMode(byte[] dataCodewords) {
+            /// <param name="result">List of DataSegments present in the data codewords if successful, otherwise empty asignment.</param>
+            /// <returns>True if segmentation successful, else false.</returns>
+            public static bool SegmentByMode(byte[] dataCodewords, out List<DataSegment> result) {
                 
                 // Dummy implementation
-                return new List<DataSegment>();
+                result = new List<DataSegment>();
+                return true;
             }
         }
 
@@ -409,7 +430,7 @@ namespace CodeReader {
             /// Tries to decode different kinds of data according to the modes.
             /// </summary>
             /// <param name="segment">Segment of data in one mode to be decoded.</param>
-            /// <param name="result">Decoded data if successful, empty assignment otherwise.</param>
+            /// <param name="result">Decoded data if successful, empty asignment otherwise.</param>
             /// <returns>True if successful, false otherwise. Result in out parametr result.</returns>
             /// <exception cref="NotSupportedException">Thrown if mode of segment not supported.</exception>
             public static bool TryDecode(DataSegment segment, out DecodedData result) {
