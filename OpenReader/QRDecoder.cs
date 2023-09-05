@@ -366,15 +366,25 @@ namespace CodeReader {
             }
 
             private List<byte[]> InicializeDataBlocks(int version, QRErrorCorrectionLevel errorCorrectionLevel) {
+                int[] blockLengths = QRBlockInfo.GetDataBlockLengths(version, errorCorrectionLevel);
+                var blocks = new List<byte[]>();
 
-                // Dummy implementation
-                return new List<byte[]>() {new byte[0]};
+                foreach (var length in blockLengths) {
+                    blocks.Add(new byte[length]);
+                }
+
+                return blocks;
             }
 
             private List<byte[]> InicializeErrorCorrectionBlocks(int version, QRErrorCorrectionLevel errorCorrectionLevel) {
-                
-                // Dummy implementation
-                return new List<byte[]>() {new byte[0]};
+                int[] blockLengths = QRBlockInfo.GetErrorCorrectionBlockLengths(version, errorCorrectionLevel);
+                var blocks = new List<byte[]>();
+
+                foreach (var length in blockLengths) {
+                    blocks.Add(new byte[length]);
+                }
+
+                return blocks;
             }
 
             private void FillBlocksWithCodewords() {
@@ -722,13 +732,13 @@ namespace CodeReader {
 
         private static class QRBlockInfo {
 
-            public static int[] GetDataBlockLenghts(int version, QRErrorCorrectionLevel errorCorrectionLevel) {
+            public static int[] GetDataBlockLengths(int version, QRErrorCorrectionLevel errorCorrectionLevel) {
                 
                 var blocks = GetBlocks(version, errorCorrectionLevel);
                 return blocks.DataBlockLengths;
             }
 
-            public static int[] GetErrorCorrectionBlockLenghts(int version, QRErrorCorrectionLevel errorCorrectionLevel) {
+            public static int[] GetErrorCorrectionBlockLengths(int version, QRErrorCorrectionLevel errorCorrectionLevel) {
                 
                 var blocks = GetBlocks(version, errorCorrectionLevel);
                 return blocks.ErrorCorrectionBlockLengths;
