@@ -387,10 +387,17 @@ namespace CodeReader {
             }
         }
 
-        // Takes corrected array of data codewords in order and divides them into segments 
-        // according to the mode indicators and character counts.
-        private class DataCodewordsSegmentor {
+        private static class DataCodewordSegmenter {
+            
+            /// <summary>
+            /// Takes sorted array of data codewords and divides them into DataSegments 
+            /// according to the mode indicators and character counts.
+            /// </summary>
+            /// <param name="dataCodewords">Sorted array of error corrected data codewords.</param>
+            /// <returns>List of DataSegments present in the data codewords.</returns>
+            public static List<DataSegment> SegmentByMode(byte[] dataCodewords) {
 
+            }
         }
 
         // Decodes different kinds of data according to the modes.
@@ -637,5 +644,11 @@ namespace CodeReader {
             
             // TODO: Complete the data to version 40!!!!
         };
+    
+        private class DataSegment {
+            public QRMode DecodeMode { get; init; }
+            public int ValidBits { get; init; }
+            public byte[] Data { get; init; }
+        }
     }
 }
