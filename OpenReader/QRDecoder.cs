@@ -1,4 +1,5 @@
 
+using System.Collections;
 using MathNet.Numerics;
 
 namespace CodeReader {
@@ -403,9 +404,49 @@ namespace CodeReader {
         }
 
         // Decodes different kinds of data according to the modes.
-        private class DataDecoder {
+        private static class DataDecoder {
 
+            /// <summary>
+            /// Tries to decode different kinds of data according to the modes.
+            /// </summary>
+            /// <param name="segment">Segment of data in one mode to be decoded.</param>
+            /// <param name="result">Decoded data if successful, empty assignment otherwise.</param>
+            /// <returns>True if successful, false otherwise. Result in out parametr result.</returns>
+            /// <exception cref="NotSupportedException">Thrown if mode of segment not supported.</exception>
+            public static bool TryDecode(DataSegment segment, out DecodedData result) {
 
+                switch(segment.Mode) {
+                    case QRMode.Alphanumeric:
+                        return TryDecodeAlphanumeric(segment, out result);
+                    case QRMode.Numeric:
+                        return TryDecodeNumeric(segment, out result);
+                    case QRMode.Byte:
+                        return TryDecodeByte(segment, out result);
+                    default:
+                        throw new NotSupportedException("Mode of the QR code data is not supported.");
+                }
+            }
+
+            private static bool TryDecodeAlphanumeric(DataSegment segment, out DecodedData result) {
+
+                // Dummy implementation
+                result = new DecodedData();
+                return false;
+            }
+
+            private static bool TryDecodeNumeric(DataSegment segment, out DecodedData result) {
+
+                // Dummy implementation
+                result = new DecodedData();
+                return false;
+            }
+
+            private static bool TryDecodeByte(DataSegment segment, out DecodedData result) {
+
+                // Dummy implementation
+                result = new DecodedData();
+                return false;
+            }
         }
 
         /// <summary>
@@ -650,11 +691,11 @@ namespace CodeReader {
     
         private class DataSegment {
             public DataSegment(QRMode mode, int validBits, byte[] data) {
-                DecodeMode = mode;
+                Mode = mode;
                 ValidBits = validBits;
                 Data = data;
             }
-            public QRMode DecodeMode { get; init; }
+            public QRMode Mode { get; init; }
             public int ValidBits { get; init; }
             public byte[] Data { get; init; }
         }
