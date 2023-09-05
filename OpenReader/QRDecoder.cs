@@ -317,13 +317,73 @@ namespace CodeReader {
 
         // Has structures for data and error blocks. Gets codewords and places them in the correct block.
         // Has to know error correction level
-        private class BlockManager {
+        private class CodewordManager {
             private CodewordCompletor _codewordCompletor;
             private CodewordErrorCorrector _codewordErrorCorrector;
+            // private int _codeVersion;
+            // private QRErrorCorrectionLevel _codeErrorCorrectionLevel;
+            private List<byte[]> _dataBlocks;
+            private List<byte[]> _errorCorrectionBlocks;
 
-            public BlockManager(QRCodeParsed code, QRFormatInfo formatInfo) {
+
+            public CodewordManager(QRCodeParsed code, QRFormatInfo formatInfo) {
                 _codewordCompletor = new CodewordCompletor(code, formatInfo.DataMask);
                 _codewordErrorCorrector = new CodewordErrorCorrector();
+                _dataBlocks = InicializeDataBlocks(code.Version, formatInfo.ErrorCorrectionLevel);
+                _errorCorrectionBlocks = InicializeErrorCorrectionBlocks(code.Version, formatInfo.ErrorCorrectionLevel);
+            }
+
+            public bool TryGetDataCodewords(out byte[] dataCodewords) {
+                FillBlocksWithCodewords();
+                
+                if (!TryCorrectErrors()) {
+                    dataCodewords = new byte[0];
+                    return false;
+                }
+
+                dataCodewords = GetDataCodewordsInOrder();
+                return true;
+            }
+
+            private List<byte[]> InicializeDataBlocks(int version, QRErrorCorrectionLevel errorCorrectionLevel) {
+
+                // Dummy implementation
+                return new List<byte[]>() {new byte[0]};
+            }
+
+            private List<byte[]> InicializeErrorCorrectionBlocks(int version, QRErrorCorrectionLevel errorCorrectionLevel) {
+                
+                // Dummy implementation
+                return new List<byte[]>() {new byte[0]};
+            }
+
+            private void FillBlocksWithCodewords() {
+
+            }
+
+            private bool TryCorrectErrors() {
+                
+                // Dummy implementation
+                return true;
+            }
+
+            private byte[] GetDataCodewordsInOrder() {
+                int lengthSum = 0;
+                foreach (var block in _dataBlocks) {
+                    lengthSum += block.Length;
+                }
+
+                var dataCodewords = new byte[lengthSum];
+
+                int index = 0;
+                foreach (var block in _dataBlocks) {
+                    foreach (var codeword in block) {
+                        dataCodewords[index] = codeword;
+                        index++;
+                    }
+                }
+                
+                return dataCodewords;
             }
         }
 
