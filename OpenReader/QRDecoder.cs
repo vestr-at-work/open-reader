@@ -34,7 +34,11 @@ namespace CodeReader {
         }
 
         public static bool TryGetData(QRCodeParsed codeData, QRFormatInfo formatInfo, out List<DecodedData> decodedData) {
-            var codewordManager = new CodewordManager(codeData, formatInfo);
+            IQRRawCodewordProvider codewordProvider = new CodewordCompletor(codeData, formatInfo.DataMask);
+            // TODO replace this class with an interface
+            CodewordErrorCorrector codewordCorrector = new CodewordErrorCorrector();
+
+            var codewordManager = new CodewordManager(codeData.Version, formatInfo.ErrorCorrectionLevel, codewordProvider, codewordCorrector);
             // int i = 0;
             // foreach (var block in completor.GetCodewords()) {
             //     Console.WriteLine(Convert.ToString(block, 2));
@@ -45,9 +49,9 @@ namespace CodeReader {
                 return false;
             }
 
-            // foreach (var codeword in dataCodewords) {
-            //     Console.WriteLine(Convert.ToString(codeword, 2));
-            // }
+            foreach (var codeword in dataCodewords) {
+                Console.WriteLine(Convert.ToString(codeword, 2));
+            }
 
             if (!DataCodewordSegmenter.SegmentByMode(dataCodewords, out List<DataSegment> dataSegments)) {
                 decodedData = new List<DecodedData>();
@@ -289,11 +293,15 @@ namespace CodeReader {
             }
         }
 
+        public interface IQRRawCodewordProvider {
+            public IEnumerable<byte> GetCodewords();
+        }
+
         /// <summary>
         /// Class for completing 8-bit words from unmasked module values and returning them by iterator method.
         /// Main public method of the class is 'GetCodewords'.
         /// </summary>
-        private class CodewordCompletor {
+        private class CodewordCompletor : IQRRawCodewordProvider {
             private DataAreaAccesor _dataAccesor;
 
             public CodewordCompletor(QRCodeParsed code, QRDataMask dataMask) {
@@ -337,7 +345,7 @@ namespace CodeReader {
         }
 
         private class CodewordManager {
-            private CodewordCompletor _codewordCompletor;
+            private IQRRawCodewordProvider _codewordProvider;
             private CodewordErrorCorrector _codewordErrorCorrector;
             // private int _codeVersion;
             // private QRErrorCorrectionLevel _codeErrorCorrectionLevel;
@@ -349,12 +357,14 @@ namespace CodeReader {
             private bool _blocksFilled = false;
 
 
-            public CodewordManager(QRCodeParsed code, QRFormatInfo formatInfo) {
-                _codewordCompletor = new CodewordCompletor(code, formatInfo.DataMask);
-                _codewordErrorCorrector = new CodewordErrorCorrector();
-                _dataBlocks = InicializeDataBlocks(code.Version, formatInfo.ErrorCorrectionLevel);
+            public CodewordManager( int codeVersion, QRErrorCorrectionLevel errorCorrectionLevel, 
+                                    IQRRawCodewordProvider codewordProvider, CodewordErrorCorrector errorCorrector) {
+
+                _codewordProvider = codewordProvider;
+                _codewordErrorCorrector = errorCorrector;
+                _dataBlocks = InicializeDataBlocks(codeVersion, errorCorrectionLevel);
                 _shorterDataBlockCount = GetShorterDataBlockCount();
-                _errorCorrectionBlocks = InicializeErrorCorrectionBlocks(code.Version, formatInfo.ErrorCorrectionLevel);
+                _errorCorrectionBlocks = InicializeErrorCorrectionBlocks(codeVersion, errorCorrectionLevel);
             }
 
             /// <summary>
@@ -419,7 +429,7 @@ namespace CodeReader {
                 }
 
                 int codewordCount = 1;
-                foreach (var codeword in _codewordCompletor.GetCodewords()) {
+                foreach (var codeword in _codewordProvider.GetCodewords()) {
                     if (codewordCount <= _dataBlockLengthSum) {
                         AddCodewordToDataBlocks(codeword, codewordCount);
                     }
