@@ -16,7 +16,6 @@ namespace CodeReader {
                     _version = value;
                 }
             }
-
         }
     }
 }

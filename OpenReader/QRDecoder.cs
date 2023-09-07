@@ -34,7 +34,8 @@ namespace CodeReader {
         }
 
         public static bool TryGetData(QRCodeParsed codeData, QRFormatInfo formatInfo, out List<DecodedData> decodedData) {
-            IQRRawCodewordProvider codewordProvider = new CodewordCompletor(codeData, formatInfo.DataMask);
+            IQRUnmaskedDataProvider dataProvider = new DataAreaAccesor(codeData, formatInfo.DataMask);
+            IQRRawCodewordProvider codewordProvider = new CodewordCompletor(dataProvider);
             // TODO replace this class with an interface
             CodewordErrorCorrector codewordCorrector = new CodewordErrorCorrector();
 
@@ -67,10 +68,15 @@ namespace CodeReader {
             return true;
         }
 
-        // Itterates over the QR code symbol in a "zig-zag" (in two columns from right to left) 
-        // "snake-like" (two-module column up then two-module column down) fashion and returns modules unmasked.
-        // Has to know about QR code parsed data, size, version, data mask.
-        private class DataAreaAccesor {
+        public interface IQRUnmaskedDataProvider {
+            public IEnumerable<byte> GetData();
+        }
+        
+        public interface IQRRawCodewordProvider {
+            public IEnumerable<byte> GetCodewords();
+        }
+
+        private class DataAreaAccesor : IQRUnmaskedDataProvider {
             private QRCodeParsed _code;
             private Predicate<Point> _isPointOnMask;
             private DataAreaChecker _checker;
@@ -81,6 +87,11 @@ namespace CodeReader {
                 _checker = DataAreaCheckerFactory.GetChecker(code.Size, code.Version);
             }
 
+            /// <summary>
+            /// Iterates over the QR code symbol in a "zig-zag" (in two columns from right to left) 
+            /// "snake-like" (two-module column up then two-module column down) fashion and returns modules unmasked.
+            /// remark: value of the module is converted to byte in the least significant bit (1 if nominaly dark module, 0 if white).
+            /// </summary>
             public IEnumerable<byte> GetData() {
                 // Setup value so the first iteration is correct
                 bool isOddTwoModuleColumn = true;
@@ -284,19 +295,15 @@ namespace CodeReader {
             }
         }
 
-        public interface IQRRawCodewordProvider {
-            public IEnumerable<byte> GetCodewords();
-        }
-
         /// <summary>
         /// Class for completing 8-bit words from unmasked module values and returning them by iterator method.
         /// Main public method of the class is 'GetCodewords'.
         /// </summary>
         private class CodewordCompletor : IQRRawCodewordProvider {
-            private DataAreaAccesor _dataAccesor;
+            private IQRUnmaskedDataProvider _dataProvider;
 
-            public CodewordCompletor(QRCodeParsed code, QRDataMask dataMask) {
-                _dataAccesor = new DataAreaAccesor(code, dataMask);
+            public CodewordCompletor(IQRUnmaskedDataProvider dataProvider) {
+                _dataProvider = dataProvider;
             }
 
             /// <summary>
@@ -307,7 +314,7 @@ namespace CodeReader {
                 int moduleCount = 0;
                 byte nextByte = 0;
                 byte resultByte;
-                foreach (byte module in _dataAccesor.GetData()) {
+                foreach (byte module in _dataProvider.GetData()) {
                     moduleCount++;
 
                     // Shift orders and add module value to least significant bit
