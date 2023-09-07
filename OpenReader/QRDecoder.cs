@@ -49,7 +49,7 @@ namespace CodeReader {
                 Console.WriteLine(Convert.ToString(codeword, 2));
             }
 
-            if (!DataCodewordSegmenter.SegmentByMode(dataCodewords, out List<DataSegment> dataSegments)) {
+            if (!DataCodewordSegmenter.TrySegmentByMode(codeData.Version, dataCodewords, out List<DataSegment> dataSegments)) {
                 decodedData = new List<DecodedData>();
                 return false;
             } 
@@ -488,7 +488,9 @@ namespace CodeReader {
         }
 
         private static class DataCodewordSegmenter {
-            
+            private const int _modeIndicatorLength = 4; 
+            private static int _byteSize = sizeof(byte);
+
             /// <summary>
             /// Takes sorted array of data codewords and tries to divides them into DataSegments 
             /// according to the mode indicators and character counts.
@@ -496,16 +498,84 @@ namespace CodeReader {
             /// <param name="dataCodewords">Sorted array of error corrected data codewords.</param>
             /// <param name="result">List of DataSegments present in the data codewords if successful, otherwise empty asignment.</param>
             /// <returns>True if segmentation successful, else false.</returns>
-            public static bool SegmentByMode(byte[] dataCodewords, out List<DataSegment> result) {
-                
-                // Dummy implementation
-                result = new List<DataSegment>();
+            public static bool TrySegmentByMode(QRVersion codeVersion, byte[] dataCodewords, out List<DataSegment> result) {
+                var segments = new List<DataSegment>();
+                int offset = 0;
+
+                for (int i = 0; i < dataCodewords.Length; i++) {
+                    if (!TryGetMode(dataCodewords[i], dataCodewords[i+1], offset, out QRMode mode)) {
+                        break;
+                    }
+                    // Update index and offset
+                    i = (offset + _modeIndicatorLength <= _byteSize) ? i : i + 1;
+                    offset = (offset + _modeIndicatorLength) % _byteSize;
+
+                    int characterCountIndicatorLength = GetCharacterCountIndicatorLength(codeVersion, mode);
+                    int characterCount = GetCharacterCount(new byte[] {dataCodewords[i]}, characterCountIndicatorLength, offset);
+
+                    // Update index and offset
+                    i = i + (characterCountIndicatorLength + offset) / _byteSize;
+                    offset = (offset + characterCountIndicatorLength) % _byteSize;
+
+                    // If count longer than rest of codeword characters
+                    if ((i * _byteSize) + offset + characterCount > dataCodewords.Length * _byteSize) {
+                        result = new List<DataSegment>();
+                        return false;
+                    }
+
+                    int segmentDataEndIndex = i + (characterCount + ((characterCount % 8) + offset) / _byteSize);
+                    var segmentDataWithOffset = dataCodewords.Skip(i + 1).Take(i - segmentDataEndIndex).ToArray();
+                    var segmentData = GetBytesWithoutOffset(segmentDataWithOffset, offset);
+
+                    segments.Add(new DataSegment(mode, characterCount, segmentData));
+
+                    i = segmentDataEndIndex;
+                }
+
+                result = segments;
                 return true;
+            }
+
+            private static int GetCharacterCountIndicatorLength(QRVersion version, QRMode mode) {
+
+                // Dummy
+                return 8;
+            }
+
+            private static int GetCharacterCount(byte[] bytes, int characterCountIndicatorLength, int offset) {
+                
+                // Dummy
+                return 1;
+            }
+
+            private static bool TryGetMode(byte firstByte, byte secondByte, int offset, out QRMode result) {
+                byte resultByte;
+                if (offset + _modeIndicatorLength <= _byteSize) {
+                    resultByte = (byte)((firstByte << offset) >> _modeIndicatorLength);  
+                }
+                else {
+                    int positionsInSecondByte = (offset + _modeIndicatorLength) % _byteSize;
+                    byte firstPart = (byte)((firstByte << offset) >> _modeIndicatorLength);
+                    byte secondPart = (byte)(secondByte >> (_byteSize - positionsInSecondByte));
+                    resultByte = (byte)(firstPart | secondPart);
+                }
+
+                if (resultByte == 0) {
+                    result = new QRMode();
+                    return false;
+                }
+                result = (QRMode)resultByte;
+                return true;
+            }
+
+            private static byte[] GetBytesWithoutOffset(byte[] bytes, int offset) {
+
+                // Dummy
+                return new byte[0];
             }
         }
 
         private static class DataDecoder {
-
             /// <summary>
             /// Tries to decode different kinds of data according to the modes.
             /// </summary>
