@@ -45,6 +45,10 @@ namespace CodeReader {
                 return false;
             }
 
+            // foreach (var codeword in dataCodewords) {
+            //     Console.WriteLine(Convert.ToString(codeword, 2));
+            // }
+
             if (!DataCodewordSegmenter.SegmentByMode(dataCodewords, out List<DataSegment> dataSegments)) {
                 decodedData = new List<DecodedData>();
                 return false;
@@ -338,13 +342,18 @@ namespace CodeReader {
             // private int _codeVersion;
             // private QRErrorCorrectionLevel _codeErrorCorrectionLevel;
             private List<byte[]> _dataBlocks;
+            private int _dataBlockLengthSum = 0;
+            private int _shorterDataBlockCount;
             private List<byte[]> _errorCorrectionBlocks;
+            private int _errorCorrectionBlockLengthSum = 0;
+            private bool _blocksFilled = false;
 
 
             public CodewordManager(QRCodeParsed code, QRFormatInfo formatInfo) {
                 _codewordCompletor = new CodewordCompletor(code, formatInfo.DataMask);
                 _codewordErrorCorrector = new CodewordErrorCorrector();
                 _dataBlocks = InicializeDataBlocks(code.Version, formatInfo.ErrorCorrectionLevel);
+                _shorterDataBlockCount = GetShorterDataBlockCount();
                 _errorCorrectionBlocks = InicializeErrorCorrectionBlocks(code.Version, formatInfo.ErrorCorrectionLevel);
             }
 
@@ -365,11 +374,27 @@ namespace CodeReader {
                 return true;
             }
 
+            private int GetShorterDataBlockCount() {
+                int baseLength = _dataBlocks[0].Length;
+                
+                int count = 0;
+                for (int i = 0; i < _dataBlocks.Count; i++) {
+                    var length = _dataBlocks[i].Length;
+                    if (length > baseLength) {
+                        break;
+                    }
+                    count += 1;
+                }
+
+                return count;
+            }
+
             private List<byte[]> InicializeDataBlocks(int version, QRErrorCorrectionLevel errorCorrectionLevel) {
                 int[] blockLengths = QRBlockInfo.GetDataBlockLengths(version, errorCorrectionLevel);
                 var blocks = new List<byte[]>();
 
                 foreach (var length in blockLengths) {
+                    _dataBlockLengthSum += length;
                     blocks.Add(new byte[length]);
                 }
 
@@ -381,6 +406,7 @@ namespace CodeReader {
                 var blocks = new List<byte[]>();
 
                 foreach (var length in blockLengths) {
+                    _errorCorrectionBlockLengthSum += length;
                     blocks.Add(new byte[length]);
                 }
 
@@ -388,7 +414,43 @@ namespace CodeReader {
             }
 
             private void FillBlocksWithCodewords() {
+                if (_blocksFilled) {
+                    return;
+                }
 
+                int codewordCount = 1;
+                foreach (var codeword in _codewordCompletor.GetCodewords()) {
+                    if (codewordCount <= _dataBlockLengthSum) {
+                        AddCodewordToDataBlocks(codeword, codewordCount);
+                    }
+                    else {
+                        AddCodewordToErrorCorrectionBlocks(codeword, codewordCount);
+                    }
+
+                    codewordCount++;
+                }
+
+                _blocksFilled = true;
+            }
+
+            private void AddCodewordToDataBlocks(byte codeword, int count) {
+                int blockCount = _dataBlocks.Count;
+                int blockIndex = (count - 1) % blockCount;
+                int codewordIndex = (count - 1) / blockCount;
+                
+                if (codewordIndex > _dataBlocks[0].Length - 1) {
+                    blockIndex += _shorterDataBlockCount;
+                }
+
+                _dataBlocks[blockIndex][codewordIndex] = codeword;
+            }
+
+            private void AddCodewordToErrorCorrectionBlocks(byte codeword, int count) {
+                int blockCount = _dataBlocks.Count;
+                int blockIndex = (count - 1 - _dataBlockLengthSum) % blockCount;
+                int codewordIndex = (count - 1 - _dataBlockLengthSum) / blockCount;
+
+                _errorCorrectionBlocks[blockIndex][codewordIndex] = codeword;
             }
 
             private bool TryCorrectErrors() {
