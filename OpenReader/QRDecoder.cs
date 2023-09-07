@@ -39,11 +39,6 @@ namespace CodeReader {
             CodewordErrorCorrector codewordCorrector = new CodewordErrorCorrector();
 
             var codewordManager = new CodewordManager(codeData.Version, formatInfo.ErrorCorrectionLevel, codewordProvider, codewordCorrector);
-            // int i = 0;
-            // foreach (var block in completor.GetCodewords()) {
-            //     Console.WriteLine(Convert.ToString(block, 2));
-            //     i++;
-            // }
             if (!codewordManager.TryGetDataCodewords(out byte[] dataCodewords)) {
                 decodedData = new List<DecodedData>();
                 return false;
@@ -117,22 +112,18 @@ namespace CodeReader {
             }
 
             private static class DataAreaCheckerFactory {
-                public static DataAreaChecker GetChecker(int codeSize, int codeVersion) {
+                public static DataAreaChecker GetChecker(int codeSize, QRVersion codeVersion) {
                     var functionAreaPoints = new HashSet<Point>();
-
+                    var version = codeVersion.Version; 
                     functionAreaPoints.UnionWith(GetFunctionalPointsCommonForAllVersions(codeSize));
 
-                    if (codeVersion > 6) {
+                    if (version > 6) {
                         functionAreaPoints.UnionWith(GetVersionInfoPoints(codeSize));
                     }
 
-                    if (codeVersion > 1) {
-                        functionAreaPoints.UnionWith(GetAlignmentPatternPoints(codeVersion));
+                    if (version > 1) {
+                        functionAreaPoints.UnionWith(GetAlignmentPatternPoints(version));
                     }
-
-                    // foreach (var point in functionAreaPoints) {
-                    //     Console.WriteLine(point);
-                    // }
 
                     return new DataAreaChecker(functionAreaPoints);
                 }
@@ -357,7 +348,7 @@ namespace CodeReader {
             private bool _blocksFilled = false;
 
 
-            public CodewordManager( int codeVersion, QRErrorCorrectionLevel errorCorrectionLevel, 
+            public CodewordManager(QRVersion codeVersion, QRErrorCorrectionLevel errorCorrectionLevel, 
                                     IQRRawCodewordProvider codewordProvider, CodewordErrorCorrector errorCorrector) {
 
                 _codewordProvider = codewordProvider;
@@ -399,7 +390,7 @@ namespace CodeReader {
                 return count;
             }
 
-            private List<byte[]> InicializeDataBlocks(int version, QRErrorCorrectionLevel errorCorrectionLevel) {
+            private List<byte[]> InicializeDataBlocks(QRVersion version, QRErrorCorrectionLevel errorCorrectionLevel) {
                 int[] blockLengths = QRBlockInfo.GetDataBlockLengths(version, errorCorrectionLevel);
                 var blocks = new List<byte[]>();
 
@@ -411,7 +402,7 @@ namespace CodeReader {
                 return blocks;
             }
 
-            private List<byte[]> InicializeErrorCorrectionBlocks(int version, QRErrorCorrectionLevel errorCorrectionLevel) {
+            private List<byte[]> InicializeErrorCorrectionBlocks(QRVersion version, QRErrorCorrectionLevel errorCorrectionLevel) {
                 int[] blockLengths = QRBlockInfo.GetErrorCorrectionBlockLengths(version, errorCorrectionLevel);
                 var blocks = new List<byte[]>();
 
@@ -804,20 +795,20 @@ namespace CodeReader {
 
         private static class QRBlockInfo {
 
-            public static int[] GetDataBlockLengths(int version, QRErrorCorrectionLevel errorCorrectionLevel) {
+            public static int[] GetDataBlockLengths(QRVersion version, QRErrorCorrectionLevel errorCorrectionLevel) {
                 
                 var blocks = GetBlocks(version, errorCorrectionLevel);
                 return blocks.DataBlockLengths;
             }
 
-            public static int[] GetErrorCorrectionBlockLengths(int version, QRErrorCorrectionLevel errorCorrectionLevel) {
+            public static int[] GetErrorCorrectionBlockLengths(QRVersion version, QRErrorCorrectionLevel errorCorrectionLevel) {
                 
                 var blocks = GetBlocks(version, errorCorrectionLevel);
                 return blocks.ErrorCorrectionBlockLengths;
             }
 
-            private static _Blocks GetBlocks(int version, QRErrorCorrectionLevel errorCorrectionLevel) {
-                var blockInfo = _blockInfoByVersion[version];
+            private static _Blocks GetBlocks(QRVersion version, QRErrorCorrectionLevel errorCorrectionLevel) {
+                var blockInfo = _blockInfoByVersion[version.Version];
 
                 switch(errorCorrectionLevel) {
                     case QRErrorCorrectionLevel.L:

@@ -100,7 +100,7 @@ namespace CodeReader {
             testImage.Dispose();
             
             var size = 17 + (4 * version);
-            rawDataMatrix = new QRCodeParsed(version, size, qrDataMatrix);
+            rawDataMatrix = new QRCodeParsed(new QRVersion {Version = version}, size, qrDataMatrix);
             return true;
         }
 
