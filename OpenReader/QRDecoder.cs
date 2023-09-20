@@ -502,34 +502,35 @@ namespace CodeReader {
                 var segments = new List<DataSegment>();
                 int offset = 0;
 
-                for (int i = 0; i < dataCodewords.Length; i++) {
-                    if (!TryGetMode(dataCodewords[i], dataCodewords[i+1], offset, out QRMode mode)) {
+                // Itterate over possible multiple segments
+                for (int codewordsPosition = 0; codewordsPosition < dataCodewords.Length; codewordsPosition++) {
+                    if (!TryGetMode(dataCodewords[codewordsPosition], dataCodewords[codewordsPosition+1], offset, out QRMode mode)) {
                         break;
                     }
                     // Update index and offset
-                    i = (offset + _modeIndicatorLength <= _byteSize) ? i : i + 1;
+                    codewordsPosition = (offset + _modeIndicatorLength <= _byteSize) ? codewordsPosition : codewordsPosition + 1;
                     offset = (offset + _modeIndicatorLength) % _byteSize;
 
                     int characterCountIndicatorLength = GetCharacterCountIndicatorLength(codeVersion, mode);
-                    int characterCount = GetCharacterCount(new byte[] {dataCodewords[i]}, characterCountIndicatorLength, offset);
-
-                    // Update index and offset
-                    i = i + (characterCountIndicatorLength + offset) / _byteSize;
-                    offset = (offset + characterCountIndicatorLength) % _byteSize;
+                    int characterCount = GetCharacterCount(new byte[] {dataCodewords[codewordsPosition]}, characterCountIndicatorLength, offset);
 
                     // If count longer than rest of codeword characters
-                    if ((i * _byteSize) + offset + characterCount > dataCodewords.Length * _byteSize) {
+                    if ((codewordsPosition * _byteSize) + offset + characterCount > dataCodewords.Length * _byteSize) {
                         result = new List<DataSegment>();
                         return false;
                     }
 
-                    int segmentDataEndIndex = i + (characterCount + ((characterCount % 8) + offset) / _byteSize);
-                    var segmentDataWithOffset = dataCodewords.Skip(i + 1).Take(i - segmentDataEndIndex).ToArray();
+                    // Update index and offset
+                    codewordsPosition = codewordsPosition + (characterCountIndicatorLength + offset) / _byteSize;
+                    offset = (offset + characterCountIndicatorLength) % _byteSize;
+
+                    int segmentDataEndIndex = codewordsPosition + (characterCount + ((characterCount % 8) + offset) / _byteSize);
+                    var segmentDataWithOffset = dataCodewords.Skip(codewordsPosition + 1).Take(codewordsPosition - segmentDataEndIndex).ToArray();
                     var segmentData = GetBytesWithoutOffset(segmentDataWithOffset, offset);
 
                     segments.Add(new DataSegment(mode, characterCount, segmentData));
 
-                    i = segmentDataEndIndex;
+                    codewordsPosition = segmentDataEndIndex;
                 }
 
                 result = segments;
@@ -569,9 +570,19 @@ namespace CodeReader {
             }
 
             private static byte[] GetBytesWithoutOffset(byte[] bytes, int offset) {
+                if (offset == 0) {
+                    return bytes;
+                }
 
-                // Dummy
-                return new byte[0];
+                var trimmedBytes = new byte[bytes.Length - 1];
+                for (int i = 0; i < bytes.Length - 1; i++) {
+                    byte firstBytePart = (byte)(bytes[i] << offset);
+                    byte secondBytePart = (byte)(bytes[i + 1] >> (_byteSize - offset));
+
+                    trimmedBytes[i] = (byte)(firstBytePart | secondBytePart);
+                }
+                
+                return trimmedBytes;
             }
         }
 
