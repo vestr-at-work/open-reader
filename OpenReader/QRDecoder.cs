@@ -497,6 +497,7 @@ namespace CodeReader {
             /// </summary>
             /// <param name="dataCodewords">Sorted array of error corrected data codewords.</param>
             /// <param name="result">List of DataSegments present in the data codewords if successful, otherwise empty asignment.</param>
+            /// <exception cref="InvalidDataException">Thrown when unknown mode present in the data.</exception>
             /// <returns>True if segmentation successful, else false.</returns>
             public static bool TrySegmentByMode(QRVersion codeVersion, byte[] dataCodewords, out List<DataSegment> result) {
                 var segments = new List<DataSegment>();
@@ -504,9 +505,17 @@ namespace CodeReader {
 
                 // Itterate over possible multiple segments
                 for (int codewordsPosition = 0; codewordsPosition < dataCodewords.Length; codewordsPosition++) {
-                    if (!TryGetMode(dataCodewords[codewordsPosition], dataCodewords[codewordsPosition+1], offset, out QRMode mode)) {
-                        break;
+                    QRMode mode;
+                    try {
+                        if (!TryGetMode(dataCodewords[codewordsPosition], dataCodewords[codewordsPosition+1], offset, out mode)) {
+                            break;
+                        }
                     }
+                    catch (InvalidDataException) {
+                        result = new List<DataSegment>();
+                        return false;
+                    }
+                    
                     // Update index and offset
                     codewordsPosition = (offset + _modeIndicatorLength <= _byteSize) ? codewordsPosition : codewordsPosition + 1;
                     offset = (offset + _modeIndicatorLength) % _byteSize;
@@ -565,8 +574,14 @@ namespace CodeReader {
                     result = new QRMode();
                     return false;
                 }
-                result = (QRMode)resultByte;
-                return true;
+                try {
+                    result = (QRMode)resultByte;
+                    return true;
+                }
+                catch {
+                    result = new QRMode();
+                    throw new InvalidDataException(message: "Provided data does not encode any known mode.");
+                }
             }
 
             private static byte[] GetBytesWithoutOffset(byte[] bytes, int offset) {
