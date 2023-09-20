@@ -546,10 +546,55 @@ namespace CodeReader {
                 return true;
             }
 
+            /// <summary>
+            /// Gets the length of character count indicator in bits. 
+            /// Supported QRModes are `QRMode.Numeric`, `QRMode.Alphanumeric`, `QRMode.Byte`, `QRMode.Kanji`.
+            /// </summary>
+            /// <param name="version">QR code version.</param>
+            /// <param name="mode">QR code mode.</param>
+            /// <returns>Length of character count indicator in bits.</returns>
             private static int GetCharacterCountIndicatorLength(QRVersion version, QRMode mode) {
+                switch (mode) {
+                    case QRMode.Numeric:
+                        if (version.Version <= 9) {
+                            return 10;
+                        }
+                        else if (version.Version <= 26) {
+                            return 12;
+                        }
+                        else {
+                            return 14;
+                        }
+                    case QRMode.Alphanumeric:
+                        if (version.Version <= 9) {
+                            return 9;
+                        }
+                        else if (version.Version <= 26) {
+                            return 11;
+                        }
+                        else {
+                            return 13;
+                        }
+                    case QRMode.Byte:
+                        if (version.Version <= 9) {
+                            return 8;
+                        }
+                        else {
+                            return 16;
+                        }
+                    case QRMode.Kanji:
+                        if (version.Version <= 9) {
+                            return 8;
+                        }
+                        else if (version.Version <= 26) {
+                            return 10;
+                        }
+                        else {
+                            return 12;
+                        }
+                }
 
-                // Dummy
-                return 8;
+                throw new InvalidParameterException(1);
             }
 
             private static int GetCharacterCount(byte[] bytes, int characterCountIndicatorLength, int offset) {
@@ -570,10 +615,12 @@ namespace CodeReader {
                     resultByte = (byte)(firstPart | secondPart);
                 }
 
+                // If end of message
                 if (resultByte == 0) {
                     result = new QRMode();
                     return false;
                 }
+
                 try {
                     result = (QRMode)resultByte;
                     return true;
