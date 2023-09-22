@@ -1,5 +1,8 @@
 
 using System.Collections;
+using System.Data.SqlTypes;
+using System.Runtime.InteropServices;
+using System.Text;
 using MathNet.Numerics;
 
 namespace CodeReader {
@@ -24,7 +27,7 @@ namespace CodeReader {
             }
 
             ushort secondaryFormatInfoRawData = GetSecondaryFormatInfoData(code);
-            if (TryParseFormatInfo(mainFormatInfoRawData, out parsedFormatInfo)) {
+            if (TryParseFormatInfo(secondaryFormatInfoRawData, out parsedFormatInfo)) {
                 formatInfo = parsedFormatInfo;
                 return true;
             }
@@ -45,14 +48,25 @@ namespace CodeReader {
                 return false;
             }
 
+            int printI = 0;
             foreach (var codeword in dataCodewords) {
-                Console.WriteLine(Convert.ToString(codeword, 2));
+                if (printI < 10)
+                    Console.WriteLine(Convert.ToString(codeword, 16));
+
+                printI++;
             }
 
             if (!DataCodewordSegmenter.TrySegmentByMode(codeData.Version, dataCodewords, out List<DataSegment> dataSegments)) {
                 decodedData = new List<DecodedData>();
                 return false;
             } 
+
+            printI = 0;
+            foreach (var dataByte in dataSegments[0].Data) {
+                if (printI < 9)
+                    Console.WriteLine($"{Convert.ToString(dataByte, 16)}, {dataByte}");
+                printI++;
+            }
 
             decodedData = new List<DecodedData>();
 
@@ -78,12 +92,12 @@ namespace CodeReader {
 
         private class DataAreaAccesor : IQRUnmaskedDataProvider {
             private QRCodeParsed _code;
-            private Predicate<Point> _isPointOnMask;
+            private Predicate<Point> _isMaskedPoint;
             private DataAreaChecker _checker;
 
             public DataAreaAccesor(QRCodeParsed code, QRDataMask dataMask) {
                 _code = code;
-                _isPointOnMask = MaskDelegateFactory.GetMaskPredicate(dataMask);
+                _isMaskedPoint = MaskDelegateFactory.GetMaskPredicate(dataMask);
                 _checker = DataAreaCheckerFactory.GetChecker(code.Size, code.Version);
             }
 
@@ -109,12 +123,12 @@ namespace CodeReader {
                             if (_checker.PointNotInDataArea(point)) {
                                 continue;
                             }
-
                             byte result = _code.Data[point.X, point.Y];
 
                             // If on mask switch value
                             // TODO: Value 255 as value of white module should be some constant somewhere!!!
-                            result = _isPointOnMask(point) ? (byte)(255 - result) : result;
+                            result = _isMaskedPoint(point) ? (byte)(255 - result) : result;
+                            Console.WriteLine($"{point}, {result}, {_isMaskedPoint(point)}");
 
                             yield return result;
                         }
@@ -134,6 +148,21 @@ namespace CodeReader {
 
                     if (version > 1) {
                         functionAreaPoints.UnionWith(GetAlignmentPatternPoints(version));
+                    }
+
+                    Console.WriteLine("");
+
+                    for (int i = 0; i < codeSize; i++) {
+                        for (int j = 0; j < codeSize; j++) {
+                            if (functionAreaPoints.TryGetValue(new Point(j, i), out _)) {
+                                Console.Write("*");
+                            }
+                            else {
+                                Console.Write(".");
+                            }
+                            
+                        }
+                        Console.Write("\n");
                     }
 
                     return new DataAreaChecker(functionAreaPoints);
@@ -215,13 +244,13 @@ namespace CodeReader {
 
                     // Vertical timing pattern
                     int x = 6;
-                    for (int j = 8; j < (codeSize - 1) - 8; j++) {
+                    for (int j = 8; j < codeSize - 8; j++) {
                         commonFunctionalPoints.Add(new Point(x, j));
                     }
 
                     // Horizontal timing pattern
                     int y = 6;
-                    for (int i = 8; i < (codeSize - 1) - 8; i++) {
+                    for (int i = 8; i < codeSize - 8; i++) {
                         commonFunctionalPoints.Add(new Point(i, y));
                     }
 
@@ -302,6 +331,8 @@ namespace CodeReader {
         private class CodewordCompletor : IQRRawCodewordProvider {
             private IQRUnmaskedDataProvider _dataProvider;
 
+            private static int _byteSize = 8;
+
             public CodewordCompletor(IQRUnmaskedDataProvider dataProvider) {
                 _dataProvider = dataProvider;
             }
@@ -323,7 +354,7 @@ namespace CodeReader {
                         nextByte |= 1;
                     }
 
-                    if (moduleCount == 8) {
+                    if (moduleCount == _byteSize) {
                         resultByte = nextByte;
                         nextByte = 0;
                         moduleCount = 0;
@@ -332,7 +363,7 @@ namespace CodeReader {
                 }
 
                 if (moduleCount > 0) {
-                    yield return (byte)(nextByte << (8 - moduleCount));
+                    yield return (byte)(nextByte << (_byteSize - moduleCount));
                 }
             }
         }
@@ -489,7 +520,7 @@ namespace CodeReader {
 
         private static class DataCodewordSegmenter {
             private const int _modeIndicatorLength = 4; 
-            private static int _byteSize = sizeof(byte);
+            private static int _byteSize = 8;
 
             /// <summary>
             /// Takes sorted array of data codewords and tries to divides them into DataSegments 
@@ -507,7 +538,7 @@ namespace CodeReader {
                 for (int codewordsPosition = 0; codewordsPosition < dataCodewords.Length; codewordsPosition++) {
                     QRMode mode;
                     try {
-                        if (!TryGetMode(dataCodewords[codewordsPosition], dataCodewords[codewordsPosition+1], offset, out mode)) {
+                        if (!TryGetMode(dataCodewords[codewordsPosition], dataCodewords[codewordsPosition + 1], offset, out mode)) {
                             break;
                         }
                     }
@@ -517,11 +548,12 @@ namespace CodeReader {
                     }
                     
                     // Update index and offset
-                    codewordsPosition = (offset + _modeIndicatorLength <= _byteSize) ? codewordsPosition : codewordsPosition + 1;
+                    codewordsPosition = (offset + _modeIndicatorLength < _byteSize) ? codewordsPosition : codewordsPosition + 1;
                     offset = (offset + _modeIndicatorLength) % _byteSize;
 
                     int characterCountIndicatorLength = GetCharacterCountIndicatorLength(codeVersion, mode);
-                    int characterCount = GetCharacterCount(new byte[] {dataCodewords[codewordsPosition]}, characterCountIndicatorLength, offset);
+                    var characterBytes = new byte[] {dataCodewords[codewordsPosition], dataCodewords[codewordsPosition + 1], dataCodewords[codewordsPosition + 2]};
+                    int characterCount = GetCharacterCount(characterBytes, characterCountIndicatorLength, offset);
 
                     // If count longer than rest of codeword characters
                     if ((codewordsPosition * _byteSize) + offset + characterCount > dataCodewords.Length * _byteSize) {
@@ -533,13 +565,13 @@ namespace CodeReader {
                     codewordsPosition = codewordsPosition + (characterCountIndicatorLength + offset) / _byteSize;
                     offset = (offset + characterCountIndicatorLength) % _byteSize;
 
-                    int segmentDataEndIndex = codewordsPosition + (characterCount + ((characterCount % 8) + offset) / _byteSize);
-                    var segmentDataWithOffset = dataCodewords.Skip(codewordsPosition + 1).Take(codewordsPosition - segmentDataEndIndex).ToArray();
+                    int padding = offset == 0 ? 0 : 1;
+                    var segmentDataWithOffset = dataCodewords.Skip(codewordsPosition).Take(characterCount + padding).ToArray();
                     var segmentData = GetBytesWithoutOffset(segmentDataWithOffset, offset);
 
                     segments.Add(new DataSegment(mode, characterCount, segmentData));
 
-                    codewordsPosition = segmentDataEndIndex;
+                    codewordsPosition += characterCount;
                 }
 
                 result = segments;
@@ -592,21 +624,41 @@ namespace CodeReader {
                         else {
                             return 12;
                         }
+                    default:
+                        throw new NotSupportedException(message: "Mode not supported.");
+                }
+            }
+
+            /// <summary>
+            /// Reads character count indicator to get the number of characters in segment.
+            /// Bits are in Msb order.
+            /// </summary>
+            /// <param name="bytes">Array of input bytes of length three.</param>
+            /// <param name="characterCountIndicatorLength">Number of bits in the character indicator.</param>
+            /// <param name="offset">Offset of the first valid bit in byte.</param>
+            /// <returns>Number of character in segment.</returns>
+            private static int GetCharacterCount(byte[] bytes, int characterCountIndicatorLength, int offset) {
+                if (bytes.Length > 3) {
+                    throw new InvalidParameterException(0);
+                }
+                if (characterCountIndicatorLength > _byteSize * 2) {
+                    throw new InvalidParameterException(1);
                 }
 
-                throw new InvalidParameterException(1);
+                // Get two data bytes
+                var dataBytes = GetBytesWithoutOffset(bytes, offset);
+
+                // Get character count from bits
+                int characterCount = ((dataBytes[0] << _byteSize) | (dataBytes[1])) >> ((_byteSize * 2) - characterCountIndicatorLength);
+                return characterCount;
             }
 
-            private static int GetCharacterCount(byte[] bytes, int characterCountIndicatorLength, int offset) {
-                
-                // Dummy
-                return 1;
-            }
-
+            // TODO Change the api for END OF MESSAGE mode!
             private static bool TryGetMode(byte firstByte, byte secondByte, int offset, out QRMode result) {
                 byte resultByte;
                 if (offset + _modeIndicatorLength <= _byteSize) {
-                    resultByte = (byte)((firstByte << offset) >> _modeIndicatorLength);  
+                    byte offsetMask = (byte)(Byte.MaxValue >> offset);
+                    resultByte = (byte)((firstByte & offsetMask) >> _modeIndicatorLength);  
                 }
                 else {
                     int positionsInSecondByte = (offset + _modeIndicatorLength) % _byteSize;
@@ -615,7 +667,7 @@ namespace CodeReader {
                     resultByte = (byte)(firstPart | secondPart);
                 }
 
-                // If end of message
+                // If end of message 
                 if (resultByte == 0) {
                     result = new QRMode();
                     return false;
@@ -632,8 +684,15 @@ namespace CodeReader {
             }
 
             private static byte[] GetBytesWithoutOffset(byte[] bytes, int offset) {
+                if (bytes.Length == 0) {
+                    throw new InvalidDataException("Byte array can not be of length 0.");
+                }
                 if (offset == 0) {
                     return bytes;
+                }
+                if (bytes.Length == 1) {
+                    var returnByte = (byte)(bytes[0] << offset);
+                    return new byte[] {returnByte};
                 }
 
                 var trimmedBytes = new byte[bytes.Length - 1];
@@ -685,10 +744,30 @@ namespace CodeReader {
             }
 
             private static bool TryDecodeByte(DataSegment segment, out DecodedData result) {
+                if (segment.Mode is not QRMode.Byte) {
+                    result = new DecodedData();
+                    return false;
+                }
 
-                // Dummy implementation
-                result = new DecodedData();
-                return false;
+                Encoding qrByte = Encoding.GetEncoding("ISO-8859-1");
+                Encoding unicode = Encoding.Unicode;
+                byte[] bytesInUnicodeEncoding;
+                try {
+                    bytesInUnicodeEncoding = Encoding.Convert(qrByte, unicode, segment.Data);
+                }
+                catch (DecoderFallbackException) {
+                    result = new DecodedData();
+                    return false;
+                }
+                catch (EncoderFallbackException) {
+                    result = new DecodedData();
+                    return false;
+                }
+
+                string data = unicode.GetString(bytesInUnicodeEncoding);
+
+                result = new DecodedData() {DataType = ContentType.Text, Data = data};
+                return true;
             }
         }
 
