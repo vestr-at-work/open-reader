@@ -48,24 +48,13 @@ namespace CodeReader {
                 return false;
             }
 
-            int printI = 0;
-            foreach (var codeword in dataCodewords) {
-                if (printI < 10)
-                    Console.WriteLine(Convert.ToString(codeword, 16));
-
-                printI++;
-            }
+            // foreach (var codeword in dataCodewords) {
+            //     Console.WriteLine(Convert.ToString(codeword, 16));
+            // }
 
             if (!DataCodewordSegmenter.TrySegmentByMode(codeData.Version, dataCodewords, out List<DataSegment> dataSegments)) {
                 decodedData = new List<DecodedData>();
                 return false;
-            } 
-
-            printI = 0;
-            foreach (var dataByte in dataSegments[0].Data) {
-                if (printI < 9)
-                    Console.WriteLine($"{Convert.ToString(dataByte, 16)}, {dataByte}");
-                printI++;
             }
 
             decodedData = new List<DecodedData>();
@@ -128,7 +117,6 @@ namespace CodeReader {
                             // If on mask switch value
                             // TODO: Value 255 as value of white module should be some constant somewhere!!!
                             result = _isMaskedPoint(point) ? (byte)(255 - result) : result;
-                            Console.WriteLine($"{point}, {result}, {_isMaskedPoint(point)}");
 
                             yield return result;
                         }
@@ -148,21 +136,6 @@ namespace CodeReader {
 
                     if (version > 1) {
                         functionAreaPoints.UnionWith(GetAlignmentPatternPoints(version));
-                    }
-
-                    Console.WriteLine("");
-
-                    for (int i = 0; i < codeSize; i++) {
-                        for (int j = 0; j < codeSize; j++) {
-                            if (functionAreaPoints.TryGetValue(new Point(j, i), out _)) {
-                                Console.Write("*");
-                            }
-                            else {
-                                Console.Write(".");
-                            }
-                            
-                        }
-                        Console.Write("\n");
                     }
 
                     return new DataAreaChecker(functionAreaPoints);
@@ -200,17 +173,20 @@ namespace CodeReader {
 
                 private static HashSet<Point> GetVersionInfoPoints(int codeSize) {
                     var versionInfoPoints = new HashSet<Point>();
+                    int patternSize = 8;
+                    int versionInfoLongerSide = 6;
+                    int versionInfoSmallerSide = 3;
 
                     // Top right version info
-                    for (int j = 0; j < 6; j++) {
-                        for (int i = (codeSize - 1) - 11; i < (codeSize - 1) - 8; i++) {
+                    for (int j = 0; j < versionInfoLongerSide; j++) {
+                        for (int i = codeSize - patternSize - versionInfoSmallerSide; i < codeSize - patternSize; i++) {
                             versionInfoPoints.Add(new Point(i, j));
                         }
                     }
 
                     // Bottom left version info
-                    for (int j = (codeSize - 1) - 11; j < (codeSize - 1) - 8; j++) {
-                        for (int i = 0; i < 6; i++) {
+                    for (int j = codeSize - patternSize - versionInfoSmallerSide; j < codeSize - patternSize; j++) {
+                        for (int i = 0; i < versionInfoLongerSide; i++) {
                             versionInfoPoints.Add(new Point(i, j));
                         }
                     }
@@ -220,37 +196,38 @@ namespace CodeReader {
 
                 private static HashSet<Point> GetFunctionalPointsCommonForAllVersions(int codeSize) {
                     var commonFunctionalPoints = new HashSet<Point>();
+                    int patternSize = 8;
 
                     // Top left pattern and top left main format info
-                    for (int j = 0; j < 9; j++) {
-                        for (int i = 0; i < 9; i++) {
+                    for (int j = 0; j <= patternSize; j++) {
+                        for (int i = 0; i <= patternSize; i++) {
                             commonFunctionalPoints.Add(new Point(i, j));
                         }
                     }
 
                     // Top right pattern and top right part of secondary format info
-                    for (int j = 0; j < 9; j++) {
-                        for (int i = (codeSize - 1) - 7; i < codeSize; i++) {
+                    for (int j = 0; j <= patternSize; j++) {
+                        for (int i = codeSize - patternSize; i < codeSize; i++) {
                             commonFunctionalPoints.Add(new Point(i, j));
                         }
                     }
 
                     // Bottom left pattern and bottom left part of secondary format info
-                    for (int j = (codeSize - 1) - 7; j < codeSize; j++) {
-                        for (int i = 0; i < 9; i++) {
+                    for (int j = codeSize - patternSize; j < codeSize; j++) {
+                        for (int i = 0; i <= patternSize; i++) {
                             commonFunctionalPoints.Add(new Point(i, j));
                         }
                     }
 
                     // Vertical timing pattern
                     int x = 6;
-                    for (int j = 8; j < codeSize - 8; j++) {
+                    for (int j = patternSize; j < codeSize - patternSize; j++) {
                         commonFunctionalPoints.Add(new Point(x, j));
                     }
 
                     // Horizontal timing pattern
                     int y = 6;
-                    for (int i = 8; i < codeSize - 8; i++) {
+                    for (int i = patternSize; i < codeSize - patternSize; i++) {
                         commonFunctionalPoints.Add(new Point(i, y));
                     }
 
