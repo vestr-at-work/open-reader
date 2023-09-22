@@ -4,6 +4,7 @@ using System.Data.SqlTypes;
 using System.Runtime.InteropServices;
 using System.Text;
 using MathNet.Numerics;
+using MathNet.Numerics.LinearAlgebra.Factorization;
 using STH1123.ReedSolomon;
 
 namespace CodeReader {
@@ -463,8 +464,11 @@ namespace CodeReader {
                     if (codewordCount <= _dataBlockLengthSum) {
                         AddCodewordToDataBlocks(codeword, codewordCount);
                     }
-                    else {
+                    else if (codewordCount <= _dataBlockLengthSum + _errorCorrectionBlockLengthSum) {
                         AddCodewordToErrorCorrectionBlocks(codeword, codewordCount - _dataBlockLengthSum);
+                    }
+                    else {
+                        break;
                     }
 
                     codewordCount++;
@@ -564,9 +568,10 @@ namespace CodeReader {
                     int characterCountIndicatorLength = GetCharacterCountIndicatorLength(codeVersion, mode);
                     var characterBytes = new byte[] {dataCodewords[codewordsPosition], dataCodewords[codewordsPosition + 1], dataCodewords[codewordsPosition + 2]};
                     int characterCount = GetCharacterCount(characterBytes, characterCountIndicatorLength, offset);
+                    int segmentBitCount = GetSegmentBitCount(characterCount, mode);
 
                     // If count longer than rest of codeword characters
-                    if ((codewordsPosition * _byteSize) + offset + characterCount > dataCodewords.Length * _byteSize) {
+                    if ((codewordsPosition * _byteSize) + offset + segmentBitCount > dataCodewords.Length * _byteSize) {
                         result = new List<DataSegment>();
                         return false;
                     }
@@ -575,13 +580,14 @@ namespace CodeReader {
                     codewordsPosition = codewordsPosition + (characterCountIndicatorLength + offset) / _byteSize;
                     offset = (offset + characterCountIndicatorLength) % _byteSize;
 
-                    int padding = offset == 0 ? 0 : 1;
-                    var segmentDataWithOffset = dataCodewords.Skip(codewordsPosition).Take(characterCount + padding).ToArray();
+                    int padding = (segmentBitCount % _byteSize) + offset == 0 ? 0 : 1;
+                    var segmentDataWithOffset = dataCodewords.Skip(codewordsPosition).Take((segmentBitCount / _byteSize) + padding).ToArray();
                     var segmentData = GetBytesWithoutOffset(segmentDataWithOffset, offset);
 
-                    segments.Add(new DataSegment(mode, characterCount, segmentData));
+                    segments.Add(new DataSegment(mode, segmentBitCount, segmentData));
 
-                    codewordsPosition += characterCount;
+                    offset = (offset + segmentBitCount) % _byteSize;
+                    codewordsPosition += segmentBitCount / _byteSize;
                 }
 
                 result = segments;
@@ -661,6 +667,26 @@ namespace CodeReader {
                 // Get character count from bits
                 int characterCount = ((dataBytes[0] << _byteSize) | (dataBytes[1])) >> ((_byteSize * 2) - characterCountIndicatorLength);
                 return characterCount;
+            }
+
+            private static int GetSegmentBitCount(int characterCount, QRMode mode) {
+                switch (mode) {
+                    case QRMode.Byte:
+                        return characterCount * _byteSize;
+                    case QRMode.Numeric:
+                        int reminderBits = 0;
+                        if (characterCount % 3 != 0) {
+                            reminderBits = characterCount % 3 == 1 ? 4 : 7;
+                        } 
+                        int bitCount = ((characterCount / 3) * 10) + reminderBits;
+                        return bitCount;
+                    case QRMode.Alphanumeric:
+                        reminderBits = characterCount % 2 == 0 ? 0 : 6;
+                        bitCount = ((characterCount / 2) * 11) + reminderBits;
+                        return bitCount;
+                    default:
+                        throw new NotSupportedException("Mode not supported.");
+                }
             }
 
             // TODO Change the api for END OF MESSAGE mode!

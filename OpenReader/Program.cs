@@ -8,17 +8,17 @@ namespace QRCodeReader {
         public static void Main(string[] args) {
             I2DCodeScanner scanner = new QRScanner();
             ScanResult result;
-            using (Image<Rgba32> image = Image.Load<Rgba32>("../TestData/QRCodeTest1.png")) {
+            using (Image<Rgba32> image = Image.Load<Rgba32>("../TestData/QRCodeTest9.png")) {
                 result = scanner.Scan(image);
             }
             
             if (!result.Success || result.DecodedData is null) {
-                Console.WriteLine("QR code could not be decoded.");
+                Console.WriteLine("\nQR code could not be decoded.");
                 return;
             }
 
             foreach (var data in result.DecodedData) {
-                Console.WriteLine($"result: {data.Data}");
+                Console.WriteLine($"\nresult: \"{data.Data}\"");
             }
             
         }
