@@ -30,6 +30,19 @@
         "build": {
           "build/SixLabors.ImageSharp.props": {}
         }
+      },
+      "STH1123.ReedSolomon/2.1.0": {
+        "type": "package",
+        "compile": {
+          "lib/netstandard1.1/ReedSolomon.dll": {
+            "related": ".xml"
+          }
+        },
+        "runtime": {
+          "lib/netstandard1.1/ReedSolomon.dll": {
+            "related": ".xml"
+          }
+        }
       }
     }
   },
@@ -71,11 +84,29 @@
         "sixlabors.imagesharp.3.0.1.nupkg.sha512",
         "sixlabors.imagesharp.nuspec"
       ]
+    },
+    "STH1123.ReedSolomon/2.1.0": {
+      "sha512": "XnpFWjT8eaZv3gq1SltwRx2p+SKtk/BLWXzbsQKPfPHYJlNMNHzZIxYx/70R+5pnvxMKaF0dISTgL5BRyKNP4Q==",
+      "type": "package",
+      "path": "sth1123.reedsolomon/2.1.0",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "lib/net20/ReedSolomon.dll",
+        "lib/net20/ReedSolomon.xml",
+        "lib/net40/ReedSolomon.dll",
+        "lib/net40/ReedSolomon.xml",
+        "lib/netstandard1.1/ReedSolomon.dll",
+        "lib/netstandard1.1/ReedSolomon.xml",
+        "sth1123.reedsolomon.2.1.0.nupkg.sha512",
+        "sth1123.reedsolomon.nuspec"
+      ]
     }
   },
   "projectFileDependencyGroups": {
     "net7.0": [
       "MathNet.Numerics >= 5.0.0",
+      "STH1123.ReedSolomon >= 2.1.0",
       "SixLabors.ImageSharp >= 3.0.1"
     ]
   },
@@ -119,6 +150,10 @@
           "MathNet.Numerics": {
             "target": "Package",
             "version": "[5.0.0, )"
+          },
+          "STH1123.ReedSolomon": {
+            "target": "Package",
+            "version": "[2.1.0, )"
           },
           "SixLabors.ImageSharp": {
             "target": "Package",

@@ -42,6 +42,10 @@
               "target": "Package",
               "version": "[5.0.0, )"
             },
+            "STH1123.ReedSolomon": {
+              "target": "Package",
+              "version": "[2.1.0, )"
+            },
             "SixLabors.ImageSharp": {
               "target": "Package",
               "version": "[3.0.1, )"

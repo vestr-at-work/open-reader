@@ -4,6 +4,7 @@ using System.Data.SqlTypes;
 using System.Runtime.InteropServices;
 using System.Text;
 using MathNet.Numerics;
+using STH1123.ReedSolomon;
 
 namespace CodeReader {
     /// <summary>
@@ -40,7 +41,7 @@ namespace CodeReader {
             IQRUnmaskedDataProvider dataProvider = new DataAreaAccesor(codeData, formatInfo.DataMask);
             IQRRawCodewordProvider codewordProvider = new CodewordCompletor(dataProvider);
             // TODO replace this class with an interface
-            CodewordErrorCorrector codewordCorrector = new CodewordErrorCorrector();
+            IBlockErrorCorrector codewordCorrector = new ReedSolomonErrorCorrector(GenericGF.QR_CODE_FIELD_256);
 
             var codewordManager = new CodewordManager(codeData.Version, formatInfo.ErrorCorrectionLevel, codewordProvider, codewordCorrector);
             if (!codewordManager.TryGetDataCodewords(out byte[] dataCodewords)) {
@@ -345,14 +346,37 @@ namespace CodeReader {
             }
         }
 
-        // Takes data codeword and coresponding error codeword and returns corrected data or false or smthng
-        private class CodewordErrorCorrector {
+        public interface IBlockErrorCorrector {
+            public bool TryCorrectBlock(int[] dataBlock, int[] errorCorrectionBlock, out int[] correctedDataBlock);
+        }
 
+        // Takes data codeword and coresponding error codeword and returns corrected data or false or smthng
+        private class ReedSolomonErrorCorrector : IBlockErrorCorrector {
+            private GenericGF _galoisField;
+            private ReedSolomonDecoder _decoder;
+
+            public ReedSolomonErrorCorrector(GenericGF galoisField) {
+                _galoisField = galoisField;
+                _decoder = new ReedSolomonDecoder(_galoisField);
+            }
+
+            public bool TryCorrectBlock(int[] dataBlock, int[] errorCorrectionBlock, out int[] correctedDataBlock) {
+                int[] dataAndErrorCorrectionCodewords = dataBlock.Concat(errorCorrectionBlock).ToArray();
+
+                if (!_decoder.Decode(dataAndErrorCorrectionCodewords, errorCorrectionBlock.Length)) {
+                    correctedDataBlock = dataBlock;
+                    return false;
+                }
+
+                // Extract corrected data
+                correctedDataBlock = dataAndErrorCorrectionCodewords.Take(dataBlock.Length).ToArray();
+                return true;
+            }
         }
 
         private class CodewordManager {
             private IQRRawCodewordProvider _codewordProvider;
-            private CodewordErrorCorrector _codewordErrorCorrector;
+            private IBlockErrorCorrector _codewordErrorCorrector;
             // private int _codeVersion;
             // private QRErrorCorrectionLevel _codeErrorCorrectionLevel;
             private List<byte[]> _dataBlocks;
@@ -364,7 +388,7 @@ namespace CodeReader {
 
 
             public CodewordManager(QRVersion codeVersion, QRErrorCorrectionLevel errorCorrectionLevel, 
-                                    IQRRawCodewordProvider codewordProvider, CodewordErrorCorrector errorCorrector) {
+                                    IQRRawCodewordProvider codewordProvider, IBlockErrorCorrector errorCorrector) {
 
                 _codewordProvider = codewordProvider;
                 _codewordErrorCorrector = errorCorrector;
@@ -440,7 +464,7 @@ namespace CodeReader {
                         AddCodewordToDataBlocks(codeword, codewordCount);
                     }
                     else {
-                        AddCodewordToErrorCorrectionBlocks(codeword, codewordCount);
+                        AddCodewordToErrorCorrectionBlocks(codeword, codewordCount - _dataBlockLengthSum);
                     }
 
                     codewordCount++;
@@ -462,16 +486,25 @@ namespace CodeReader {
             }
 
             private void AddCodewordToErrorCorrectionBlocks(byte codeword, int count) {
-                int blockCount = _dataBlocks.Count;
-                int blockIndex = (count - 1 - _dataBlockLengthSum) % blockCount;
-                int codewordIndex = (count - 1 - _dataBlockLengthSum) / blockCount;
+                int blockCount = _errorCorrectionBlocks.Count;
+                int blockIndex = (count - 1) % blockCount;
+                int codewordIndex = (count - 1) / blockCount;
 
                 _errorCorrectionBlocks[blockIndex][codewordIndex] = codeword;
             }
 
             private bool TryCorrectErrors() {
-                
-                // Dummy implementation
+                for (int i = 0; i < _dataBlocks.Count; i++) {
+                    int[] dataBlockInt = _dataBlocks[i].Select(codeword => (int)codeword).ToArray();
+                    int[] errorCorrectionBlockInt = _errorCorrectionBlocks[i].Select(codeword => (int)codeword).ToArray();
+                    if (!_codewordErrorCorrector.TryCorrectBlock(dataBlockInt, errorCorrectionBlockInt, out int[] correctedBlock)) {
+                        Console.WriteLine($"error correction of block {i}: failed");
+                        return false;
+                    }
+                    Console.WriteLine($"error correction of block {i}: successful");
+                    _dataBlocks[i] = correctedBlock.Select(codeword => (byte)codeword).ToArray();
+                }
+
                 return true;
             }
 

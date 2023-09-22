@@ -16,6 +16,7 @@
   <ItemGroup>
     <PackageReference Include="SixLabors.ImageSharp" Version="3.0.1" />
     <PackageReference Include="MathNet.Numerics" Version="5.0.0" />
+    <PackageReference Include="STH1123.ReedSolomon" Version="2.1.0" />
   </ItemGroup>
 
 

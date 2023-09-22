@@ -1,11 +1,12 @@
 {
   "version": 2,
-  "dgSpecHash": "zUFFBF3GGChVVz8Rvqdie4cvuh4EhbidqM6TaBBM3Mffgrof0Rh1eQj6rRsCCytYS6bvMHHMb2emuG+3EK4bCg==",
+  "dgSpecHash": "CabGHI8h+FcUUUnGEpSmt2dvy8/0Dr4BaKyCFZs9YglPaiVGvKg7SdOITLiosuwXehhLbABYaBFqCtAKlPQ4CQ==",
   "success": true,
   "projectFilePath": "/home/vestr/moje soubory/matfyz/pokročilé programování v jazyce c#/open-reader/OpenReader/OpenReader.csproj",
   "expectedPackageFiles": [
     "/home/vestr/.nuget/packages/mathnet.numerics/5.0.0/mathnet.numerics.5.0.0.nupkg.sha512",
-    "/home/vestr/.nuget/packages/sixlabors.imagesharp/3.0.1/sixlabors.imagesharp.3.0.1.nupkg.sha512"
+    "/home/vestr/.nuget/packages/sixlabors.imagesharp/3.0.1/sixlabors.imagesharp.3.0.1.nupkg.sha512",
+    "/home/vestr/.nuget/packages/sth1123.reedsolomon/2.1.0/sth1123.reedsolomon.2.1.0.nupkg.sha512"
   ],
   "logs": []
 }
