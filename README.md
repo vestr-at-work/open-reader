@@ -1,5 +1,5 @@
 # 📖 Open Reader
-Open-Source QR Code Reader
+Open-Source QR Code Reader written and availabe for use in C#.
 
 ## Specification in Czech
 >Cílem programu je konzolová aplikace v jazyce C#, která na standardním vstupu dostane cestu k
