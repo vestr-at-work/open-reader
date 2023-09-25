@@ -2,6 +2,9 @@ using System.Diagnostics;
 using CodeReaderCommons;
 using System.Numerics;
 using MathNet.Numerics.LinearAlgebra;
+using System.Reflection.Metadata.Ecma335;
+using System.Globalization;
+using MathNet.Numerics.Optimization.TrustRegion;
 
 
 namespace CodeReader {
@@ -288,8 +291,191 @@ namespace CodeReader {
             }
 
 
-            public static bool TryGetAlignmentPatterns(Image<L8> image) {
-                return true;
+            public static bool TryGetAlignmentPattern(Image<L8> subimage, out Point alignmentPatternCentroid) {
+                var extractor = new AlignmentPatternExtractor(subimage);
+                
+                return extractor.TryGetPattern(out alignmentPatternCentroid);
+            }
+
+            private class AlignmentPatternExtractor {
+                private byte[,] _subimageMatrix;
+                private int _size;
+                private int[,] _whiteComponentMatrix;
+                private int[,] _blackComponentMatrix;
+                private List<List<Point>> _neighborsToBlackComponents = new List<List<Point>>();
+                private List<List<Point>> _neighborsToWhiteComponents = new List<List<Point>>();
+                private int _whiteComponentCount = 0;
+                private List<List<Point>> _blackComponentPoints = new List<List<Point>>();
+
+                public AlignmentPatternExtractor(Image<L8> subimage) {
+                    _subimageMatrix = GetMatrixFromImage(subimage);
+
+                    _size = _subimageMatrix.GetLength(0);
+                    _whiteComponentMatrix = new int[_size, _size];
+                    _blackComponentMatrix = new int[_size, _size];
+                    InicializeComponentMatrices(_size, 0);
+                }
+
+                public bool TryGetPattern(out Point patternCentroid) {
+                    GetWhiteComponents();
+                    GetBlackComponents();
+
+                    if (!TryGetAlignmentPatternCenterComponent(out int componentNumber)) {
+                        patternCentroid = new Point();
+                        return false;
+                    }
+
+                    // Calculate centroid coords and return
+                    patternCentroid = GetBlackComponentCentroid(componentNumber);
+                    return true;
+                }
+
+                private void InicializeComponentMatrices(int size, int value) {
+                    for (int j = 0; j < size; j++) {
+                        for (int i = 0; i < size; i++) {
+                            _whiteComponentMatrix[i, j] = value;
+                            _blackComponentMatrix[i, j] = value;
+                        }
+                    }
+                }
+
+                private Point GetBlackComponentCentroid(int componentNumber) {
+                    int sumX = 0;
+                    int sumY = 0;
+                    foreach (var point in _blackComponentPoints[componentNumber]) {
+                        sumX += point.X;
+                        sumY += point.Y;
+                    }
+
+                    double meanX = sumX / (double)_blackComponentPoints[componentNumber].Count;
+                    double meanY = sumY / (double)_blackComponentPoints[componentNumber].Count;
+
+                    return new Point(Convert.ToInt32(meanX), Convert.ToInt32(meanY));
+                }
+
+                private bool TryGetAlignmentPatternCenterComponent(out int componentNumber) {
+                    for (int i = 0; i < _neighborsToBlackComponents.Count; i++) {
+                        List<int> whiteNeighborComponents = GetComponents(_neighborsToBlackComponents[i], _whiteComponentMatrix);
+
+                        if (whiteNeighborComponents.Count != 1) {
+                            continue;
+                        }
+
+                        int whiteNeighborComponentIndex = whiteNeighborComponents[0];
+                        List<int> blackNeighborsToWhiteComponent = GetComponents(_neighborsToWhiteComponents[whiteNeighborComponentIndex], _blackComponentMatrix);
+
+                        if (blackNeighborsToWhiteComponent.Count == 1) {
+                            componentNumber = i;
+                            return true;
+                        }
+                    }
+
+                    componentNumber = 0;
+                    return false;
+                }
+
+                private List<int> GetComponents(List<Point> points, int[,] componentMatrix) {
+                    var components = new List<int>();
+                    foreach (var point in points) {
+                        int componentNumber = componentMatrix[point.X, point.Y];
+                        if (components.Contains(componentNumber)) {
+                            continue;
+                        }
+                        components.Add(componentNumber);
+                    }
+
+                    return components;
+                }
+
+
+                private void GetWhiteComponents() {
+                    for (int j = 0; j < _size; j++) {
+                        for (int i = 0; i < _size; i++) {
+                            if (_subimageMatrix[i, j] == 0 && _whiteComponentMatrix[i, j] == 0) {
+                                Point entryPoint = new Point(i, j);
+                                WhiteComponentDFS(entryPoint, _whiteComponentCount++);
+                            }
+                        }
+                    }
+                }
+
+                private void GetBlackComponents() {
+                    for (int j = 0; j < _size; j++) {
+                        for (int i = 0; i < _size; i++) {
+                            if (_subimageMatrix[i, j] == 0 && _blackComponentMatrix[i, j] == 0) {
+                                int newComponentNumber = _blackComponentPoints.Count;
+                                Point entryPoint = new Point(i, j);
+                                _blackComponentPoints.Add(new List<Point>() {entryPoint});
+                                BlackComponentDFS(entryPoint, newComponentNumber);
+                            }
+                        }
+                    }
+                }
+
+                private void WhiteComponentDFS(Point newPoint, int componentNumber) {
+                    _whiteComponentMatrix[newPoint.X, newPoint.Y] = componentNumber;
+
+                    for (int j = -1; j < 2; j++) {
+                        for (int i = -1; i < 2; i++) {
+                            if (!IsOutsideBoundary(newPoint.X + i, newPoint.Y + j)) {
+                                var neighbor = new Point (newPoint.X + i, newPoint.Y + j);
+                                if (_subimageMatrix[neighbor.X, neighbor.Y] == 0) {
+                                    _neighborsToWhiteComponents[componentNumber].Add(neighbor);
+                                    continue;
+                                }
+
+                                if (_subimageMatrix[neighbor.X, neighbor.Y] == 255 && 
+                                    _whiteComponentMatrix[neighbor.X, neighbor.Y] == 0) {
+                                        
+                                    WhiteComponentDFS(neighbor, componentNumber);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                private void BlackComponentDFS(Point newPoint, int componentNumber) {
+                    _blackComponentMatrix[newPoint.X, newPoint.Y] = componentNumber;
+
+                    for (int j = -1; j < 2; j++) {
+                        for (int i = -1; i < 2; i++) {
+                            if (!IsOutsideBoundary(newPoint.X + i, newPoint.Y + j)) {
+                                var neighbor = new Point (newPoint.X + i, newPoint.Y + j);
+                                if (_subimageMatrix[neighbor.X, neighbor.Y] == 255) {
+                                    _neighborsToBlackComponents[componentNumber].Add(neighbor);
+                                    continue;
+                                }
+
+                                if (_subimageMatrix[neighbor.X, neighbor.Y] == 0 && 
+                                    _blackComponentMatrix[neighbor.X, neighbor.Y] == 0) {
+                                    _blackComponentPoints[componentNumber].Add(neighbor);
+                                    BlackComponentDFS(neighbor, componentNumber);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                private bool IsOutsideBoundary(int x, int y) {
+                    return x < 0 || x >= _size || y < 0 || y >= _size;
+                }
+
+                private byte[,] GetMatrixFromImage(Image<L8> image) {
+                    byte[,] matrix = new byte[image.Width, image.Height];
+
+                    image.ProcessPixelRows(accessor => {
+                        for (int y = 0; y < accessor.Height; y++) {
+                            Span<L8> pixelRow = accessor.GetRowSpan(y);
+
+                            for (int x = 0; x < pixelRow.Length; x++) {
+                                byte pixelValue = pixelRow[x].PackedValue;
+                                matrix[x, y] = pixelValue;
+                            }
+                        }
+                    });
+
+                    return matrix;
+                } 
             }
 
             private struct ColorBloc {
