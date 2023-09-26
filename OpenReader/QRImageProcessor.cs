@@ -5,6 +5,7 @@ using MathNet.Numerics.LinearAlgebra;
 using System.Reflection.Metadata.Ecma335;
 using System.Globalization;
 using MathNet.Numerics.Optimization.TrustRegion;
+using System.Net.Http.Headers;
 
 
 namespace CodeReader {
@@ -85,13 +86,33 @@ namespace CodeReader {
             Console.WriteLine($"topLeft: {finderPatterns.TopLeftPattern}");
             Console.WriteLine($"topRight: {finderPatterns.TopRightPattern}");
             Console.WriteLine($"bottomLeft: {finderPatterns.BottomLeftPattern}");
+
+            var approxAlignmentPatternCentroid = QRPatternFinder.GetApproximateAlignmentPatternCentroid(finderPatterns);
+            // TODO Add checking if rectangle bounds not outside the image
+            Rectangle alignmentPatternNeighborhood = new Rectangle(approxAlignmentPatternCentroid.X - 25, approxAlignmentPatternCentroid.Y - 25, 50, 50);
+
+            if (!QRPatternFinder.TryGetAlignmentPattern(binarizedImage, alignmentPatternNeighborhood, out Point alignmentPatternCentroid)) {
+                binarizedImage.Save("../TestData/QRCodeTestOUTPUT.png");
+                binarizedImage.Dispose();
+
+                rawDataMatrix = null;
+                return false;
+            }
+
+            Console.WriteLine($"alignmentPatter: {alignmentPatternCentroid}");
             
             double moduleSize = QRInfoExtractor.GetModuleSize(finderPatterns, out double rotationAngle);
             int version = QRInfoExtractor.GetVersion(finderPatterns, moduleSize, rotationAngle);
 
             Console.WriteLine($"moduleSize: {moduleSize}, version: {version}");
 
-            byte[,] qrDataMatrix = QRImageSampler.Sample(binarizedImage, finderPatterns, version, out Image<L8> testImage);
+            byte[,] qrDataMatrix = QRImageSampler.Sample(
+                binarizedImage, 
+                finderPatterns,
+                alignmentPatternCentroid, 
+                version, 
+                out Image<L8> testImage
+            );
 
             sw.Stop();
             Console.WriteLine($"time: {sw.Elapsed}");
@@ -199,28 +220,28 @@ namespace CodeReader {
             /// <param name="moduleSize">Size of one module of the QR code.</param>
             /// <param name="version">Estimated version of the QR code.</param>
             /// <returns>Sampled QR code image data. Value 0 means black, value 255 means white.</returns>
-            public static byte[,] Sample(Image<L8> binerizedImage, QRFinderPatternTrio patterns, int version, out Image<L8> image) {
+            public static byte[,] Sample(Image<L8> binerizedImage, QRFinderPatternTrio patterns, Point bottomRightAlignmentPatterCentroid, int version, out Image<L8> image) {
                 int codeSideLength = 17 + (4 * version);
                 int outputSize = codeSideLength;
 
-                Matrix<double> transformationMatrix = CalculateTransformationMatrix(patterns, codeSideLength);
+                Matrix<double> transformationMatrix = CalculateTransformationMatrix(patterns, bottomRightAlignmentPatterCentroid, codeSideLength);
                 byte[,] resampledImage = new byte[outputSize, outputSize];
-
-                // var point = Matrix<double>.Build.DenseOfArray(new double[,] {
-                //     { 3.5 },
-                //     { 3.5 },
-                //     { 1 }
-                // });
-
-                // Console.WriteLine($"{transformationMatrix * point}");
 
                 image = new Image<L8>(codeSideLength, codeSideLength);
 
                 for (int y = 0; y < outputSize; y++) {
                     for (int x = 0; x < outputSize; x++) {
-                        // Map the output array coordinates to the original image using the affine transformation
-                        double originalX = transformationMatrix[0, 0] * (x + 0.5) + transformationMatrix[0, 1] * (y + 0.5) + transformationMatrix[0, 2];
-                        double originalY = transformationMatrix[1, 0] * (x + 0.5) + transformationMatrix[1, 1] * (y + 0.5) + transformationMatrix[1, 2];
+                        // Map the output array coordinates to the original image using the perspective transformation
+                        var arrayPoint = Matrix<double>.Build.DenseOfArray(new double[,] {
+                            { x + 0.5 },
+                            { y + 0.5 },
+                            { 1 }
+                        });
+
+                        var transformedPoint = transformationMatrix * arrayPoint;
+
+                        double originalX = transformedPoint[0, 0] / transformedPoint[2, 0];
+                        double originalY = transformedPoint[1, 0] / transformedPoint[2, 0];
 
                         int pixelX = (int)Math.Round(originalX);
                         int pixelY = (int)Math.Round(originalY);
@@ -238,31 +259,54 @@ namespace CodeReader {
                 return resampledImage;
             }
 
-            private static Matrix<double> CalculateTransformationMatrix(QRFinderPatternTrio patterns, int sideLength) {
-                double xTopLeft = patterns.TopLeftPattern.Centroid.X;
-                double yTopLeft = patterns.TopLeftPattern.Centroid.Y;
-                double xTopRight = patterns.TopRightPattern.Centroid.X;
-                double yTopRight = patterns.TopRightPattern.Centroid.Y;
-                double xBottomLeft = patterns.BottomLeftPattern.Centroid.X;
-                double yBottomLeft = patterns.BottomLeftPattern.Centroid.Y;
+            private static Matrix<double> CalculateTransformationMatrix(QRFinderPatternTrio patterns, Point bottomRightAlignmentPatterCentroid, int sideLength) {
+                double xTopLeftSource = patterns.TopLeftPattern.Centroid.X;
+                double yTopLeftSource = patterns.TopLeftPattern.Centroid.Y;
+                double xTopRightSource = patterns.TopRightPattern.Centroid.X;
+                double yTopRightSource = patterns.TopRightPattern.Centroid.Y;
+                double xBottomLeftSource = patterns.BottomLeftPattern.Centroid.X;
+                double yBottomLeftSource = patterns.BottomLeftPattern.Centroid.Y;
+                double xBottomRightSource = bottomRightAlignmentPatterCentroid.X;
+                double yBottomRightSource = bottomRightAlignmentPatterCentroid.Y;
 
-                Matrix<double> imagePointsMatrix = Matrix<double>.Build.DenseOfArray(new double[,] {
-                    { xTopLeft, xTopRight, xBottomLeft },
-                    { yTopLeft, yTopRight, yBottomLeft },
-                    { 1, 1, 1 }
+                double xTopLeftTarget = 3.5;
+                double yTopLeftTarget = 3.5;
+                double xTopRightTarget = sideLength - 3.5;
+                double yTopRightTarget = 3.5;
+                double xBottomLeftTarget = 3.5;
+                double yBottomLeftTarget = sideLength - 3.5;
+                double xBottomRightTarget = sideLength - 6.5;
+                double yBottomRightTarget = sideLength - 6.5;
+
+                // Define the system of linear equations to solve for the transformation matrix coefficients
+                var coefficients = Matrix<double>.Build.DenseOfArray(new double[,]
+                {
+                    { xTopLeftTarget, yTopLeftTarget,         1, 0, 0, 0, -(xTopLeftSource * xTopLeftTarget), -(xTopLeftSource * yTopLeftTarget) },
+                    { xTopRightTarget, yTopRightTarget,       1, 0, 0, 0, -(xTopRightSource * xTopRightTarget), -(xTopRightSource * yTopRightTarget) },
+                    { xBottomLeftTarget, yBottomLeftTarget,   1, 0, 0, 0, -(xBottomLeftSource * xBottomLeftTarget), -(xBottomLeftSource * yBottomLeftTarget) },
+                    { xBottomRightTarget, yBottomRightTarget, 1, 0, 0, 0, -(xBottomRightSource * xBottomRightTarget), -(xBottomRightSource * yBottomRightTarget) },
+                    { 0, 0, 0, xTopLeftTarget,      yTopLeftTarget,       1, -(yTopLeftSource * xTopLeftTarget), -(yTopLeftSource * yTopLeftTarget) },
+                    { 0, 0, 0, xTopRightTarget,     yTopRightTarget,      1, -(yTopRightSource * xTopRightTarget), -(yTopRightSource * yTopRightTarget) },
+                    { 0, 0, 0, xBottomLeftTarget,   yBottomLeftTarget,    1, -(yBottomLeftSource * xBottomLeftTarget), -(yBottomLeftSource * yBottomLeftTarget) },
+                    { 0, 0, 0, xBottomRightTarget,  yBottomRightTarget,   1, -(yBottomRightSource * xBottomRightTarget), -(yBottomRightSource * yBottomRightTarget) }
                 });
 
-                Matrix<double> transformedPointsMatrix = Matrix<double>.Build.DenseOfArray(new double[,] {
-                    { 3.5, sideLength - 3.5 , 3.5 },
-                    { 3.5, 3.5, sideLength - 3.5 },
-                    { 1, 1, 1 }
-                });
+                var transformedPointsMatrix = MathNet.Numerics.LinearAlgebra.Vector<double>.Build.DenseOfArray(new double[] 
+                    { xTopLeftSource, xTopRightSource, xBottomLeftSource, xBottomRightSource, 
+                      yTopLeftSource, yTopRightSource, yBottomLeftSource, yBottomRightSource });
 
-                Matrix<double> transformationMatrix = imagePointsMatrix * transformedPointsMatrix.Inverse();
+                // Solve the system of linear equations to find the transformation matrix coefficients
+                var transformationMatrixCoefficients = coefficients.Solve(transformedPointsMatrix);
+
+                // Construct the transformation matrix
+                var transformationMatrix = Matrix<double>.Build.DenseOfArray(new double[,]
+                {
+                    { transformationMatrixCoefficients[0], transformationMatrixCoefficients[1], transformationMatrixCoefficients[2] },
+                    { transformationMatrixCoefficients[3], transformationMatrixCoefficients[4], transformationMatrixCoefficients[5] },
+                    { transformationMatrixCoefficients[6], transformationMatrixCoefficients[7], 1 }
+                });
 
                 return transformationMatrix;
-
-                //Console.WriteLine(transformationMatrix * transformedPointsMatrix);
             }
         }
         
@@ -291,10 +335,45 @@ namespace CodeReader {
             }
 
 
-            public static bool TryGetAlignmentPattern(Image<L8> subimage, out Point alignmentPatternCentroid) {
+            public static bool TryGetAlignmentPattern(Image<L8> image, Rectangle alignmentNeighborhood, out Point alignmentPatternCentroid) {
+                Image<L8> subimage = image.Clone(i => i.Crop(alignmentNeighborhood));
                 var extractor = new AlignmentPatternExtractor(subimage);
-                
-                return extractor.TryGetPattern(out alignmentPatternCentroid);
+                subimage.Save("../TestData/QRCodeTestAlignmentOUTPUT.png");
+                subimage.Dispose();
+
+                if (!extractor.TryGetPattern(out Point localAlignmentPatternCentroid)) {
+                    alignmentPatternCentroid = new Point();
+                    return false;
+                }
+
+                alignmentPatternCentroid = new Point(localAlignmentPatternCentroid.X + alignmentNeighborhood.X, localAlignmentPatternCentroid.Y + alignmentNeighborhood.Y);
+                return true;
+            }
+
+            public static Point GetApproximateAlignmentPatternCentroid(QRFinderPatternTrio finderPatterns) {
+                double dx1 = finderPatterns.TopRightPattern.Centroid.X - finderPatterns.TopLeftPattern.Centroid.X;
+                double dy1 = finderPatterns.TopRightPattern.Centroid.Y - finderPatterns.TopLeftPattern.Centroid.Y;
+                double dx2 = finderPatterns.BottomLeftPattern.Centroid.X - finderPatterns.TopLeftPattern.Centroid.X;
+                double dy2 = finderPatterns.BottomLeftPattern.Centroid.Y - finderPatterns.TopLeftPattern.Centroid.Y;
+
+                (double x, double y) vector1 = (dx1, dy1);
+                (double x, double y) vector2 = (dx2, dy2);
+
+                double angleNumerator = vector1.x * vector2.x + vector1.y * vector2.y;
+                double vector1Length = Math.Sqrt(vector1.x * vector1.x + vector1.y * vector1.y);
+                double vector2Length = Math.Sqrt(vector2.x * vector2.x + vector2.y * vector2.y);
+                double angleDenominator = vector1Length * vector2Length;
+                double angleBetweenTwoSides = Math.Acos(angleNumerator / angleDenominator);
+
+                (double x, double y) alignmentUnitVector = (Math.Sin(angleBetweenTwoSides / 2), Math.Cos(angleBetweenTwoSides / 2));
+
+                double meanVectorLength = (vector1Length + vector2Length) / 2;
+                int patternRadius = finderPatterns.TopLeftPattern.EstimatedWidth / 2;
+                int pointX = Convert.ToInt32(finderPatterns.TopLeftPattern.Centroid.X + (alignmentUnitVector.x * (Math.Sqrt(2) * (meanVectorLength - patternRadius))));
+                int pointY = Convert.ToInt32(finderPatterns.TopLeftPattern.Centroid.Y + (alignmentUnitVector.y * (Math.Sqrt(2) * (meanVectorLength - patternRadius))));
+
+                Point alignmentPattern = new Point(pointX, pointY);
+                return alignmentPattern;
             }
 
             private class AlignmentPatternExtractor {
@@ -313,13 +392,14 @@ namespace CodeReader {
                     _size = _subimageMatrix.GetLength(0);
                     _whiteComponentMatrix = new int[_size, _size];
                     _blackComponentMatrix = new int[_size, _size];
-                    InicializeComponentMatrices(_size, 0);
+                    InicializeComponentMatrices(_size, -1);
                 }
 
                 public bool TryGetPattern(out Point patternCentroid) {
-                    GetWhiteComponents();
-                    GetBlackComponents();
+                    CalculateWhiteComponents();
+                    CalculateBlackComponents();
 
+                    Console.WriteLine($"{_blackComponentPoints.Count}, {_whiteComponentCount}");
                     if (!TryGetAlignmentPatternCenterComponent(out int componentNumber)) {
                         patternCentroid = new Point();
                         return false;
@@ -355,16 +435,26 @@ namespace CodeReader {
 
                 private bool TryGetAlignmentPatternCenterComponent(out int componentNumber) {
                     for (int i = 0; i < _neighborsToBlackComponents.Count; i++) {
-                        List<int> whiteNeighborComponents = GetComponents(_neighborsToBlackComponents[i], _whiteComponentMatrix);
+                        List<int> whiteNeighborComponents = GetComponentNumbers(_neighborsToBlackComponents[i], _whiteComponentMatrix, out bool outsideBounds);
+                        System.Console.WriteLine("");
+                        foreach (var component in whiteNeighborComponents) {
+                            System.Console.WriteLine($"{component}");
+                        }
 
-                        if (whiteNeighborComponents.Count != 1) {
+                        if (whiteNeighborComponents.Count != 1 || outsideBounds) {
                             continue;
                         }
 
                         int whiteNeighborComponentIndex = whiteNeighborComponents[0];
-                        List<int> blackNeighborsToWhiteComponent = GetComponents(_neighborsToWhiteComponents[whiteNeighborComponentIndex], _blackComponentMatrix);
+                        List<int> blackNeighborsToWhiteComponent = GetComponentNumbers(_neighborsToWhiteComponents[whiteNeighborComponentIndex], _blackComponentMatrix, out outsideBounds);
 
-                        if (blackNeighborsToWhiteComponent.Count == 1) {
+                        System.Console.WriteLine("--");
+                        foreach (var component in blackNeighborsToWhiteComponent) {
+                            System.Console.WriteLine($"{component}");
+                        }
+
+                        // If only one more black component is a neighbor
+                        if (blackNeighborsToWhiteComponent.Count == 2 && !outsideBounds) {
                             componentNumber = i;
                             return true;
                         }
@@ -374,13 +464,20 @@ namespace CodeReader {
                     return false;
                 }
 
-                private List<int> GetComponents(List<Point> points, int[,] componentMatrix) {
+                private List<int> GetComponentNumbers(List<Point> points, int[,] componentMatrix, out bool outsideBounds) {
                     var components = new List<int>();
+                    outsideBounds = false;
                     foreach (var point in points) {
+                        if (IsOutsideBoundary(point.X, point.Y)) {
+                            outsideBounds = true;
+                            continue;
+                        }
+
                         int componentNumber = componentMatrix[point.X, point.Y];
                         if (components.Contains(componentNumber)) {
                             continue;
                         }
+
                         components.Add(componentNumber);
                     }
 
@@ -388,10 +485,10 @@ namespace CodeReader {
                 }
 
 
-                private void GetWhiteComponents() {
+                private void CalculateWhiteComponents() {
                     for (int j = 0; j < _size; j++) {
                         for (int i = 0; i < _size; i++) {
-                            if (_subimageMatrix[i, j] == 0 && _whiteComponentMatrix[i, j] == 0) {
+                            if (_subimageMatrix[i, j] == 255 && _whiteComponentMatrix[i, j] == -1) {
                                 Point entryPoint = new Point(i, j);
                                 WhiteComponentDFS(entryPoint, _whiteComponentCount++);
                             }
@@ -399,10 +496,10 @@ namespace CodeReader {
                     }
                 }
 
-                private void GetBlackComponents() {
+                private void CalculateBlackComponents() {
                     for (int j = 0; j < _size; j++) {
                         for (int i = 0; i < _size; i++) {
-                            if (_subimageMatrix[i, j] == 0 && _blackComponentMatrix[i, j] == 0) {
+                            if (_subimageMatrix[i, j] == 0 && _blackComponentMatrix[i, j] == -1) {
                                 int newComponentNumber = _blackComponentPoints.Count;
                                 Point entryPoint = new Point(i, j);
                                 _blackComponentPoints.Add(new List<Point>() {entryPoint});
@@ -417,18 +514,14 @@ namespace CodeReader {
 
                     for (int j = -1; j < 2; j++) {
                         for (int i = -1; i < 2; i++) {
-                            if (!IsOutsideBoundary(newPoint.X + i, newPoint.Y + j)) {
-                                var neighbor = new Point (newPoint.X + i, newPoint.Y + j);
-                                if (_subimageMatrix[neighbor.X, neighbor.Y] == 0) {
-                                    _neighborsToWhiteComponents[componentNumber].Add(neighbor);
-                                    continue;
-                                }
+                            var neighbor = new Point (newPoint.X + i, newPoint.Y + j);
+                            if (IsOutsideBoundary(neighbor.X, neighbor.Y) || _subimageMatrix[neighbor.X, neighbor.Y] == 0) {
+                                AddNeighborToList(_neighborsToWhiteComponents, componentNumber, neighbor);
+                                continue;
+                            }
 
-                                if (_subimageMatrix[neighbor.X, neighbor.Y] == 255 && 
-                                    _whiteComponentMatrix[neighbor.X, neighbor.Y] == 0) {
-                                        
-                                    WhiteComponentDFS(neighbor, componentNumber);
-                                }
+                            if (_subimageMatrix[neighbor.X, neighbor.Y] == 255 && _whiteComponentMatrix[neighbor.X, neighbor.Y] == -1) {  
+                                WhiteComponentDFS(neighbor, componentNumber);
                             }
                         }
                     }
@@ -439,20 +532,26 @@ namespace CodeReader {
 
                     for (int j = -1; j < 2; j++) {
                         for (int i = -1; i < 2; i++) {
-                            if (!IsOutsideBoundary(newPoint.X + i, newPoint.Y + j)) {
-                                var neighbor = new Point (newPoint.X + i, newPoint.Y + j);
-                                if (_subimageMatrix[neighbor.X, neighbor.Y] == 255) {
-                                    _neighborsToBlackComponents[componentNumber].Add(neighbor);
-                                    continue;
-                                }
+                            var neighbor = new Point (newPoint.X + i, newPoint.Y + j);
+                            if (IsOutsideBoundary(neighbor.X, neighbor.Y) || _subimageMatrix[neighbor.X, neighbor.Y] == 255) {
+                                AddNeighborToList(_neighborsToBlackComponents, componentNumber, neighbor);
+                                continue;
+                            }
 
-                                if (_subimageMatrix[neighbor.X, neighbor.Y] == 0 && 
-                                    _blackComponentMatrix[neighbor.X, neighbor.Y] == 0) {
-                                    _blackComponentPoints[componentNumber].Add(neighbor);
-                                    BlackComponentDFS(neighbor, componentNumber);
-                                }
+                            if (_subimageMatrix[neighbor.X, neighbor.Y] == 0 && _blackComponentMatrix[neighbor.X, neighbor.Y] == -1) {
+                                _blackComponentPoints[componentNumber].Add(neighbor);
+                                BlackComponentDFS(neighbor, componentNumber);
                             }
                         }
+                    }
+                }
+
+                private void AddNeighborToList(List<List<Point>> componentNeighbors, int componentNumber, Point neighbor) {
+                    if (componentNeighbors.Count <= componentNumber) {
+                        componentNeighbors.Add(new List<Point>() {neighbor});
+                    }
+                    else {
+                        componentNeighbors[componentNumber].Add(neighbor);
                     }
                 }
 
