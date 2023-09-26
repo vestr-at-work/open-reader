@@ -436,10 +436,6 @@ namespace CodeReader {
                 private bool TryGetAlignmentPatternCenterComponent(out int componentNumber) {
                     for (int i = 0; i < _neighborsToBlackComponents.Count; i++) {
                         List<int> whiteNeighborComponents = GetComponentNumbers(_neighborsToBlackComponents[i], _whiteComponentMatrix, out bool outsideBounds);
-                        System.Console.WriteLine("");
-                        foreach (var component in whiteNeighborComponents) {
-                            System.Console.WriteLine($"{component}");
-                        }
 
                         if (whiteNeighborComponents.Count != 1 || outsideBounds) {
                             continue;
@@ -447,11 +443,6 @@ namespace CodeReader {
 
                         int whiteNeighborComponentIndex = whiteNeighborComponents[0];
                         List<int> blackNeighborsToWhiteComponent = GetComponentNumbers(_neighborsToWhiteComponents[whiteNeighborComponentIndex], _blackComponentMatrix, out outsideBounds);
-
-                        System.Console.WriteLine("--");
-                        foreach (var component in blackNeighborsToWhiteComponent) {
-                            System.Console.WriteLine($"{component}");
-                        }
 
                         // If only one more black component is a neighbor
                         if (blackNeighborsToWhiteComponent.Count == 2 && !outsideBounds) {
