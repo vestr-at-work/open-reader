@@ -83,7 +83,7 @@ namespace CodeReader {
 
         private class DataAreaAccesor : IQRUnmaskedDataProvider {
             private QRCodeParsed _code;
-            private Predicate<Point> _isMaskedPoint;
+            private Predicate<Point<int>> _isMaskedPoint;
             private DataAreaChecker _checker;
 
             public DataAreaAccesor(QRCodeParsed code, QRDataMask dataMask) {
@@ -110,7 +110,7 @@ namespace CodeReader {
 
                         for (int k = 0; k >= -1; k--) {
                             int x = i + k;
-                            Point point = new Point(x, y);
+                            var point = new Point<int>(x, y);
                             if (_checker.PointNotInDataArea(point)) {
                                 continue;
                             }
@@ -128,7 +128,7 @@ namespace CodeReader {
 
             private static class DataAreaCheckerFactory {
                 public static DataAreaChecker GetChecker(int codeSize, QRVersion codeVersion) {
-                    var functionAreaPoints = new HashSet<Point>();
+                    var functionAreaPoints = new HashSet<Point<int>>();
                     var version = codeVersion.Version; 
                     functionAreaPoints.UnionWith(GetFunctionalPointsCommonForAllVersions(codeSize));
 
@@ -143,8 +143,8 @@ namespace CodeReader {
                     return new DataAreaChecker(functionAreaPoints);
                 }
 
-                private static HashSet<Point> GetAlignmentPatternPoints(int version) {
-                    var alignmentPatternPoints = new HashSet<Point>();
+                private static HashSet<Point<int>> GetAlignmentPatternPoints(int version) {
+                    var alignmentPatternPoints = new HashSet<Point<int>>();
 
                     if (version >= _alignmentPatternCountAndCoordsByVersion.Length) {
                         throw new InvalidParameterException(version);
@@ -164,7 +164,7 @@ namespace CodeReader {
                             int patternCentroidY = patternCoords[l];
                             for (int j = -2; j < 3; j++) {
                                 for (int i = -2; i < 3; i++) {
-                                    alignmentPatternPoints.Add(new Point(patternCentroidX + i, patternCentroidY + j));
+                                    alignmentPatternPoints.Add(new Point<int>(patternCentroidX + i, patternCentroidY + j));
                                 }
                             }
                         }
@@ -173,8 +173,8 @@ namespace CodeReader {
                     return alignmentPatternPoints;
                 }
 
-                private static HashSet<Point> GetVersionInfoPoints(int codeSize) {
-                    var versionInfoPoints = new HashSet<Point>();
+                private static HashSet<Point<int>> GetVersionInfoPoints(int codeSize) {
+                    var versionInfoPoints = new HashSet<Point<int>>();
                     int patternSize = 8;
                     int versionInfoLongerSide = 6;
                     int versionInfoSmallerSide = 3;
@@ -182,55 +182,55 @@ namespace CodeReader {
                     // Top right version info
                     for (int j = 0; j < versionInfoLongerSide; j++) {
                         for (int i = codeSize - patternSize - versionInfoSmallerSide; i < codeSize - patternSize; i++) {
-                            versionInfoPoints.Add(new Point(i, j));
+                            versionInfoPoints.Add(new Point<int>(i, j));
                         }
                     }
 
                     // Bottom left version info
                     for (int j = codeSize - patternSize - versionInfoSmallerSide; j < codeSize - patternSize; j++) {
                         for (int i = 0; i < versionInfoLongerSide; i++) {
-                            versionInfoPoints.Add(new Point(i, j));
+                            versionInfoPoints.Add(new Point<int>(i, j));
                         }
                     }
 
                     return versionInfoPoints;
                 }
 
-                private static HashSet<Point> GetFunctionalPointsCommonForAllVersions(int codeSize) {
-                    var commonFunctionalPoints = new HashSet<Point>();
+                private static HashSet<Point<int>> GetFunctionalPointsCommonForAllVersions(int codeSize) {
+                    var commonFunctionalPoints = new HashSet<Point<int>>();
                     int patternSize = 8;
 
                     // Top left pattern and top left main format info
                     for (int j = 0; j <= patternSize; j++) {
                         for (int i = 0; i <= patternSize; i++) {
-                            commonFunctionalPoints.Add(new Point(i, j));
+                            commonFunctionalPoints.Add(new Point<int>(i, j));
                         }
                     }
 
                     // Top right pattern and top right part of secondary format info
                     for (int j = 0; j <= patternSize; j++) {
                         for (int i = codeSize - patternSize; i < codeSize; i++) {
-                            commonFunctionalPoints.Add(new Point(i, j));
+                            commonFunctionalPoints.Add(new Point<int>(i, j));
                         }
                     }
 
                     // Bottom left pattern and bottom left part of secondary format info
                     for (int j = codeSize - patternSize; j < codeSize; j++) {
                         for (int i = 0; i <= patternSize; i++) {
-                            commonFunctionalPoints.Add(new Point(i, j));
+                            commonFunctionalPoints.Add(new Point<int>(i, j));
                         }
                     }
 
                     // Vertical timing pattern
                     int x = 6;
                     for (int j = patternSize; j < codeSize - patternSize; j++) {
-                        commonFunctionalPoints.Add(new Point(x, j));
+                        commonFunctionalPoints.Add(new Point<int>(x, j));
                     }
 
                     // Horizontal timing pattern
                     int y = 6;
                     for (int i = patternSize; i < codeSize - patternSize; i++) {
-                        commonFunctionalPoints.Add(new Point(i, y));
+                        commonFunctionalPoints.Add(new Point<int>(i, y));
                     }
 
                     return commonFunctionalPoints;
@@ -242,9 +242,9 @@ namespace CodeReader {
             /// Main public method is 'PointInDataArea'.
             /// </summary>
             private class DataAreaChecker {
-                private HashSet<Point> _functionAreaPoints;
+                private HashSet<Point<int>> _functionAreaPoints;
 
-                public DataAreaChecker(HashSet<Point> functionAreaPoints) {
+                public DataAreaChecker(HashSet<Point<int>> functionAreaPoints) {
                     _functionAreaPoints = functionAreaPoints;
                 }
 
@@ -253,8 +253,8 @@ namespace CodeReader {
                 /// </summary>
                 /// <param name="point">Point in the QR code symbol.</param>
                 /// <returns>True if coordinates in data area, else returns false.</returns>
-                public bool PointInDataArea(Point point) {
-                    return !_functionAreaPoints.TryGetValue(point, out Point _);
+                public bool PointInDataArea(Point<int> point) {
+                    return !_functionAreaPoints.TryGetValue(point, out Point<int> _);
                 }
 
                 /// <summary>
@@ -262,7 +262,7 @@ namespace CodeReader {
                 /// </summary>
                 /// <param name="point">Point in the QR code symbol.</param>
                 /// <returns>False if coordinates in data area, else returns true.</returns>
-                public bool PointNotInDataArea(Point point) {
+                public bool PointNotInDataArea(Point<int> point) {
                     return !PointInDataArea(point);
                 }
             }
@@ -277,24 +277,24 @@ namespace CodeReader {
                 /// </summary>
                 /// <param name="mask">QR code data mask.</param>
                 /// <returns></returns>
-                public static Predicate<Point> GetMaskPredicate(QRDataMask mask) {
+                public static Predicate<Point<int>> GetMaskPredicate(QRDataMask mask) {
                     switch(mask) {
                         case QRDataMask.Mask0:
-                            return (Point p) => { return (p.X + p.Y) % 2 == 0; };
+                            return (Point<int> p) => { return (p.X + p.Y) % 2 == 0; };
                         case QRDataMask.Mask1:
-                            return (Point p) => { return (p.Y) % 2 == 0; };
+                            return (Point<int> p) => { return (p.Y) % 2 == 0; };
                         case QRDataMask.Mask2:
-                            return (Point p) => { return (p.X) % 3 == 0; };
+                            return (Point<int> p) => { return (p.X) % 3 == 0; };
                         case QRDataMask.Mask3:
-                            return (Point p) => { return (p.X + p.Y) % 3 == 0; };
+                            return (Point<int> p) => { return (p.X + p.Y) % 3 == 0; };
                         case QRDataMask.Mask4:
-                            return (Point p) => { return ((p.X / (float)3) + (p.Y / (float)2)) % 2 is < 0.0001f and > -0.0001f; };
+                            return (Point<int> p) => { return ((p.X / (float)3) + (p.Y / (float)2)) % 2 is < 0.0001f and > -0.0001f; };
                         case QRDataMask.Mask5:
-                            return (Point p) => { return ((p.X * p.Y) % 3) + ((p.X * p.Y) % 2) == 0; };
+                            return (Point<int> p) => { return ((p.X * p.Y) % 3) + ((p.X * p.Y) % 2) == 0; };
                         case QRDataMask.Mask6:
-                            return (Point p) => { return (((p.X * p.Y) % 3) + ((p.X * p.Y) % 2)) % 2 == 0; };
+                            return (Point<int> p) => { return (((p.X * p.Y) % 3) + ((p.X * p.Y) % 2)) % 2 == 0; };
                         case QRDataMask.Mask7:
-                            return (Point p) => { return (((p.X * p.Y) % 3) + ((p.X + p.Y) % 2)) % 2 == 0; };
+                            return (Point<int> p) => { return (((p.X * p.Y) % 3) + ((p.X + p.Y) % 2)) % 2 == 0; };
                         default:
                             // Can not happen if all masks implemented
                             throw new NotSupportedException();

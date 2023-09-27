@@ -1,25 +1,32 @@
 
+using System.Numerics;
+
 namespace CodeReader {
-    struct Point : IEquatable<Point> {
-        public Point(int x, int y) {
+    struct Point<TUnderlying> : IEquatable<Point<TUnderlying>>
+         where TUnderlying : INumber<TUnderlying>, IConvertible {
+        public Point(TUnderlying x, TUnderlying y) {
             X = x;
             Y = y;
         }
 
-        public int X;
-        public int Y;
+        public TUnderlying X;
+        public TUnderlying Y;
 
-        public double DistanceFrom(Point other) {
-            return Math.Sqrt(Math.Pow(this.X - other.X, 2) 
-                        + Math.Pow(this.Y - other.Y, 2));
+        public double DistanceFrom(Point<TUnderlying> other) {
+            return Math.Sqrt(Math.Pow((this.X - other.X).ToDouble(null), 2) 
+                        + Math.Pow((this.Y - other.Y).ToDouble(null), 2));
         }
 
-        public bool Equals(Point other) {
+        public bool Equals(Point<TUnderlying> other) {
             return (this.X == other.X) && (this.Y == other.Y);
         }       
 
         public override string ToString() {
-            return $"XCoord: {X}, YCoord: {Y}";
+            return $"X: {X}, Y: {Y}";
+        }
+
+        public static explicit operator Point<double>(Point<TUnderlying> instance) {
+            return new Point<double>(instance.X.ToDouble(null), instance.Y.ToDouble(null));
         }
     }
 }
