@@ -19,8 +19,6 @@ namespace CodeReader {
         public static bool TryGetFormatInfo(QRCodeParsed code, out QRFormatInfo formatInfo) {
             ushort mainFormatInfoRawData = GetMainFormatInfoData(code);
             if (TryParseFormatInfo(mainFormatInfoRawData, out QRFormatInfo parsedFormatInfo)) {
-
-                Console.WriteLine($"errorLevel: {parsedFormatInfo.ErrorCorrectionLevel}, dataMask: {parsedFormatInfo.DataMask}");
                 formatInfo = parsedFormatInfo;
                 return true;
             }
@@ -46,10 +44,6 @@ namespace CodeReader {
                 decodedData = new List<DecodedData>();
                 return false;
             }
-
-            // foreach (var codeword in dataCodewords) {
-            //     Console.WriteLine(Convert.ToString(codeword, 16));
-            // }
 
             if (!DataCodewordSegmenter.TrySegmentByMode(codeData.Version, dataCodewords, out List<DataSegment> dataSegments)) {
                 decodedData = new List<DecodedData>();
@@ -499,10 +493,10 @@ namespace CodeReader {
                     int[] dataBlockInt = _dataBlocks[i].Select(codeword => (int)codeword).ToArray();
                     int[] errorCorrectionBlockInt = _errorCorrectionBlocks[i].Select(codeword => (int)codeword).ToArray();
                     if (!_codewordErrorCorrector.TryCorrectBlock(dataBlockInt, errorCorrectionBlockInt, out int[] correctedBlock)) {
-                        Console.WriteLine($"error correction of block {i}: failed");
+                        //Console.WriteLine($"error correction of block {i}: failed");
                         return false;
                     }
-                    Console.WriteLine($"error correction of block {i}: successful");
+                    //Console.WriteLine($"error correction of block {i}: successful");
                     _dataBlocks[i] = correctedBlock.Select(codeword => (byte)codeword).ToArray();
                 }
 

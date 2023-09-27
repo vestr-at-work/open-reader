@@ -434,8 +434,6 @@ namespace CodeReader {
                     alignmentUnitVector = (Math.Sin(alignmentVectorAngle), Math.Cos(alignmentVectorAngle));
                 }
                 
-
-                Console.WriteLine($"{alignmentUnitVector}");
                 double meanVectorLength = (vector1Length + vector2Length) / 2;
                 int patternRadius = finderPatterns.TopLeftPattern.EstimatedWidth / 2;
                 int pointX = Convert.ToInt32(finderPatterns.TopLeftPattern.Centroid.X + (alignmentUnitVector.x * (Math.Sqrt(2) * (meanVectorLength - patternRadius))));
@@ -1035,8 +1033,6 @@ namespace CodeReader {
                 var angleByPattern1 = GetAdjacentAngle(patternTrio.Pattern1.Centroid, patternTrio.Pattern2.Centroid, patternTrio.Pattern3.Centroid);
                 var angleByPattern2 = GetAdjacentAngle(patternTrio.Pattern2.Centroid, patternTrio.Pattern1.Centroid, patternTrio.Pattern3.Centroid);
                 var angleByPattern3 = GetAdjacentAngle(patternTrio.Pattern3.Centroid, patternTrio.Pattern1.Centroid, patternTrio.Pattern2.Centroid);
-
-                Console.WriteLine($"first: {angleByPattern1}, second: {angleByPattern2}, third: {angleByPattern3}");
 
                 var maxAngle = Math.Max(Math.Max(angleByPattern1, angleByPattern2), angleByPattern3);
 
