@@ -2,7 +2,6 @@ using CodeReaderCommons;
 using System.Numerics;
 using MathNet.Numerics.LinearAlgebra;
 
-
 namespace CodeReader {
     /// <summary>
     /// Class responsible for processing the input image.

@@ -1,10 +1,7 @@
 
 using System.Collections;
-using System.Data.SqlTypes;
-using System.Runtime.InteropServices;
 using System.Text;
 using MathNet.Numerics;
-using MathNet.Numerics.LinearAlgebra.Factorization;
 using STH1123.ReedSolomon;
 
 namespace CodeReader {
@@ -1072,7 +1069,7 @@ namespace CodeReader {
                 return blocks.ErrorCorrectionBlockLengths;
             }
 
-            private static _Blocks GetBlocks(QRVersion version, QRErrorCorrectionLevel errorCorrectionLevel) {
+            private static Blocks GetBlocks(QRVersion version, QRErrorCorrectionLevel errorCorrectionLevel) {
                 var blockInfo = _blockInfoByVersion[version.Version];
 
                 switch(errorCorrectionLevel) {
@@ -1089,104 +1086,104 @@ namespace CodeReader {
                 }
             }
 
-            private static readonly _VersionBlockInfo[] _blockInfoByVersion = {
-                new _VersionBlockInfo(),
+            private static readonly VersionBlockInfo[] _blockInfoByVersion = {
+                new VersionBlockInfo(),
                 //Version 1
-                new _VersionBlockInfo(
-                    new _Blocks(new int[] {19}, new int[] {7}), 
-                    new _Blocks(new int[] {16}, new int[] {10}),
-                    new _Blocks(new int[] {13}, new int[] {13}),
-                    new _Blocks(new int[] {10}, new int[] {16})),
+                new VersionBlockInfo(
+                    new Blocks(new int[] {19}, new int[] {7}), 
+                    new Blocks(new int[] {16}, new int[] {10}),
+                    new Blocks(new int[] {13}, new int[] {13}),
+                    new Blocks(new int[] {10}, new int[] {16})),
                 //Version 2
-                new _VersionBlockInfo(
-                    new _Blocks(new int[] {34}, new int[] {10}), 
-                    new _Blocks(new int[] {28}, new int[] {16}),
-                    new _Blocks(new int[] {22}, new int[] {22}),
-                    new _Blocks(new int[] {16}, new int[] {28})),
+                new VersionBlockInfo(
+                    new Blocks(new int[] {34}, new int[] {10}), 
+                    new Blocks(new int[] {28}, new int[] {16}),
+                    new Blocks(new int[] {22}, new int[] {22}),
+                    new Blocks(new int[] {16}, new int[] {28})),
                 //Version 3
-                new _VersionBlockInfo(
-                    new _Blocks(new int[] {55}, new int[] {15}), 
-                    new _Blocks(new int[] {44}, new int[] {26}),
-                    new _Blocks(new int[] {17, 17}, new int[] {18, 18}),
-                    new _Blocks(new int[] {13, 13}, new int[] {22, 22})),
+                new VersionBlockInfo(
+                    new Blocks(new int[] {55}, new int[] {15}), 
+                    new Blocks(new int[] {44}, new int[] {26}),
+                    new Blocks(new int[] {17, 17}, new int[] {18, 18}),
+                    new Blocks(new int[] {13, 13}, new int[] {22, 22})),
                 //Version 4
-                new _VersionBlockInfo(
-                    new _Blocks(new int[] {80}, new int[] {20}), 
-                    new _Blocks(new int[] {32, 32}, new int[] {18, 18}),
-                    new _Blocks(new int[] {24, 24}, new int[] {26, 26}),
-                    new _Blocks(new int[] {9, 9, 9, 9}, new int[] {16, 16, 16, 16})),
+                new VersionBlockInfo(
+                    new Blocks(new int[] {80}, new int[] {20}), 
+                    new Blocks(new int[] {32, 32}, new int[] {18, 18}),
+                    new Blocks(new int[] {24, 24}, new int[] {26, 26}),
+                    new Blocks(new int[] {9, 9, 9, 9}, new int[] {16, 16, 16, 16})),
                 //Version 5
-                new _VersionBlockInfo(
-                    new _Blocks(new int[] {108}, new int[] {26}), 
-                    new _Blocks(new int[] {43, 43}, new int[] {24, 24}),
-                    new _Blocks(new int[] {15, 15, 16, 16}, new int[] {18, 18, 18, 18}),
-                    new _Blocks(new int[] {11, 11, 12, 12}, new int[] {22, 22, 22, 22})),
+                new VersionBlockInfo(
+                    new Blocks(new int[] {108}, new int[] {26}), 
+                    new Blocks(new int[] {43, 43}, new int[] {24, 24}),
+                    new Blocks(new int[] {15, 15, 16, 16}, new int[] {18, 18, 18, 18}),
+                    new Blocks(new int[] {11, 11, 12, 12}, new int[] {22, 22, 22, 22})),
                 //Version 6
-                new _VersionBlockInfo(
-                    new _Blocks(new int[] {68, 68}, new int[] {16, 16}), 
-                    new _Blocks(new int[] {27, 27, 27, 27}, new int[] {16, 16, 16, 16}),
-                    new _Blocks(new int[] {19, 19, 19, 19}, new int[] {24, 24, 24, 24}),
-                    new _Blocks(new int[] {15, 15, 15, 15}, new int[] {28, 28, 28, 28})),
+                new VersionBlockInfo(
+                    new Blocks(new int[] {68, 68}, new int[] {16, 16}), 
+                    new Blocks(new int[] {27, 27, 27, 27}, new int[] {16, 16, 16, 16}),
+                    new Blocks(new int[] {19, 19, 19, 19}, new int[] {24, 24, 24, 24}),
+                    new Blocks(new int[] {15, 15, 15, 15}, new int[] {28, 28, 28, 28})),
                 //Version 7
-                new _VersionBlockInfo(
-                    new _Blocks(new int[] {78, 78}, new int[] {20, 20}), 
-                    new _Blocks(new int[] {31, 31, 31, 31}, new int[] {18, 18, 18, 18}),
-                    new _Blocks(new int[] {14, 14, 15, 15, 15, 15}, new int[] {18, 18, 18, 18, 18, 18}),
-                    new _Blocks(new int[] {13, 13, 13, 13, 14}, new int[] {26, 26, 26, 26, 26})),
+                new VersionBlockInfo(
+                    new Blocks(new int[] {78, 78}, new int[] {20, 20}), 
+                    new Blocks(new int[] {31, 31, 31, 31}, new int[] {18, 18, 18, 18}),
+                    new Blocks(new int[] {14, 14, 15, 15, 15, 15}, new int[] {18, 18, 18, 18, 18, 18}),
+                    new Blocks(new int[] {13, 13, 13, 13, 14}, new int[] {26, 26, 26, 26, 26})),
                 //Version 8
-                new _VersionBlockInfo(
-                    new _Blocks(new int[] {97, 97}, new int[] {24, 24}), 
-                    new _Blocks(new int[] {38, 38, 39, 39}, new int[] {22, 22, 22, 22}),
-                    new _Blocks(new int[] {18, 18, 18, 18, 19, 19}, new int[] {22, 22, 22, 22, 22, 22}),
-                    new _Blocks(new int[] {14, 14, 14, 14, 15, 15}, new int[] {26, 26, 26, 26, 26, 26})),
+                new VersionBlockInfo(
+                    new Blocks(new int[] {97, 97}, new int[] {24, 24}), 
+                    new Blocks(new int[] {38, 38, 39, 39}, new int[] {22, 22, 22, 22}),
+                    new Blocks(new int[] {18, 18, 18, 18, 19, 19}, new int[] {22, 22, 22, 22, 22, 22}),
+                    new Blocks(new int[] {14, 14, 14, 14, 15, 15}, new int[] {26, 26, 26, 26, 26, 26})),
                 //Version 9
-                new _VersionBlockInfo(
-                    new _Blocks(new int[] {116, 116}, new int[] {30, 30}), 
-                    new _Blocks(new int[] {36, 36, 36, 37, 37}, new int[] {22, 22, 22, 22, 22}),
-                    new _Blocks(new int[] {16, 16, 16, 16, 17, 17, 17, 17}, new int[] {20, 20, 20, 20, 20, 20, 20, 20}),
-                    new _Blocks(new int[] {12, 12, 12, 12, 13, 13, 13, 13}, new int[] {24, 24, 24, 24, 24, 24, 24, 24})),
+                new VersionBlockInfo(
+                    new Blocks(new int[] {116, 116}, new int[] {30, 30}), 
+                    new Blocks(new int[] {36, 36, 36, 37, 37}, new int[] {22, 22, 22, 22, 22}),
+                    new Blocks(new int[] {16, 16, 16, 16, 17, 17, 17, 17}, new int[] {20, 20, 20, 20, 20, 20, 20, 20}),
+                    new Blocks(new int[] {12, 12, 12, 12, 13, 13, 13, 13}, new int[] {24, 24, 24, 24, 24, 24, 24, 24})),
                 //Version 10
-                new _VersionBlockInfo(
-                    new _Blocks(new int[] {68, 68, 69, 69}, new int[] {18, 18, 18, 18}), 
-                    new _Blocks(new int[] {43, 43, 43, 43, 44}, new int[] {26, 26, 26, 26, 26}),
-                    new _Blocks(new int[] {19, 19, 19, 19, 19, 19, 20, 20}, new int[] {24, 24, 24, 24, 24, 24, 24, 24}),
-                    new _Blocks(new int[] {15, 15, 15, 15, 15, 15, 16, 16}, new int[] {28, 28, 28, 28, 28, 28, 28, 28})),
+                new VersionBlockInfo(
+                    new Blocks(new int[] {68, 68, 69, 69}, new int[] {18, 18, 18, 18}), 
+                    new Blocks(new int[] {43, 43, 43, 43, 44}, new int[] {26, 26, 26, 26, 26}),
+                    new Blocks(new int[] {19, 19, 19, 19, 19, 19, 20, 20}, new int[] {24, 24, 24, 24, 24, 24, 24, 24}),
+                    new Blocks(new int[] {15, 15, 15, 15, 15, 15, 16, 16}, new int[] {28, 28, 28, 28, 28, 28, 28, 28})),
                 //Version 11
-                new _VersionBlockInfo(
-                    new _Blocks(new int[] {81, 81, 81, 81}, new int[] {20, 20, 20, 20}), 
-                    new _Blocks(new int[] {50, 51, 51, 51, 51}, new int[] {30, 30, 30, 30, 30}),
-                    new _Blocks(new int[] {22, 22, 22, 22, 23, 23, 23, 23}, new int[] {28, 28, 28, 28, 28, 28, 28, 28}),
-                    new _Blocks(new int[] {12, 12, 12, 13, 13, 13, 13, 13, 13, 13, 13}, new int[] {24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24})),
+                new VersionBlockInfo(
+                    new Blocks(new int[] {81, 81, 81, 81}, new int[] {20, 20, 20, 20}), 
+                    new Blocks(new int[] {50, 51, 51, 51, 51}, new int[] {30, 30, 30, 30, 30}),
+                    new Blocks(new int[] {22, 22, 22, 22, 23, 23, 23, 23}, new int[] {28, 28, 28, 28, 28, 28, 28, 28}),
+                    new Blocks(new int[] {12, 12, 12, 13, 13, 13, 13, 13, 13, 13, 13}, new int[] {24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24})),
                 //Version 12
-                new _VersionBlockInfo(
-                    new _Blocks(new int[] {92, 92, 93, 93}, new int[] {24, 24, 24, 24}), 
-                    new _Blocks(new int[] {36, 36, 36, 36, 36, 36, 37, 37}, new int[] {22, 22, 22, 22, 22, 22, 22, 22}),
-                    new _Blocks(new int[] {20, 20, 20, 20, 21, 21, 21, 21, 21, 21}, new int[] {26, 26, 26, 26, 26, 26, 26, 26, 26}),
-                    new _Blocks(new int[] {14, 14, 14, 14, 14, 14, 14, 15, 15, 15, 15}, new int[] {28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28})),
+                new VersionBlockInfo(
+                    new Blocks(new int[] {92, 92, 93, 93}, new int[] {24, 24, 24, 24}), 
+                    new Blocks(new int[] {36, 36, 36, 36, 36, 36, 37, 37}, new int[] {22, 22, 22, 22, 22, 22, 22, 22}),
+                    new Blocks(new int[] {20, 20, 20, 20, 21, 21, 21, 21, 21, 21}, new int[] {26, 26, 26, 26, 26, 26, 26, 26, 26}),
+                    new Blocks(new int[] {14, 14, 14, 14, 14, 14, 14, 15, 15, 15, 15}, new int[] {28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28})),
                 //Version 13
-                new _VersionBlockInfo(
-                    new _Blocks(new int[] {107, 107, 107, 107}, new int[] {26, 26, 26, 26}), 
-                    new _Blocks(new int[] {37, 37, 37, 37, 37, 37, 37, 37, 38}, new int[] {22, 22, 22, 22, 22, 22, 22, 22, 22}),
-                    new _Blocks(new int[] {20, 20, 20, 20, 20, 20, 20, 20, 21, 21, 21, 21}, new int[] {24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24}),
-                    new _Blocks(new int[] {11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 12, 12, 12, 12}, new int[] {22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22})),
+                new VersionBlockInfo(
+                    new Blocks(new int[] {107, 107, 107, 107}, new int[] {26, 26, 26, 26}), 
+                    new Blocks(new int[] {37, 37, 37, 37, 37, 37, 37, 37, 38}, new int[] {22, 22, 22, 22, 22, 22, 22, 22, 22}),
+                    new Blocks(new int[] {20, 20, 20, 20, 20, 20, 20, 20, 21, 21, 21, 21}, new int[] {24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24}),
+                    new Blocks(new int[] {11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 12, 12, 12, 12}, new int[] {22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22})),
                 //Version 14
-                new _VersionBlockInfo(
-                    new _Blocks(new int[] {115, 115, 115, 116}, new int[] {30, 30, 30, 30}), 
-                    new _Blocks(new int[] {40, 40, 40, 40, 41, 41, 41, 41, 41}, new int[] {24, 24, 24, 24, 24, 24, 24, 24, 24}),
-                    new _Blocks(new int[] {16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 17, 17, 17, 17, 17}, new int[] {20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20}),
-                    new _Blocks(new int[] {12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 13, 13, 13, 13, 13}, new int[] {24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24})),
+                new VersionBlockInfo(
+                    new Blocks(new int[] {115, 115, 115, 116}, new int[] {30, 30, 30, 30}), 
+                    new Blocks(new int[] {40, 40, 40, 40, 41, 41, 41, 41, 41}, new int[] {24, 24, 24, 24, 24, 24, 24, 24, 24}),
+                    new Blocks(new int[] {16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 17, 17, 17, 17, 17}, new int[] {20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20}),
+                    new Blocks(new int[] {12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 13, 13, 13, 13, 13}, new int[] {24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24})),
                 //Version 15
-                new _VersionBlockInfo(
-                    new _Blocks(new int[] {87, 87, 87, 87, 87, 88}, new int[] {22, 22, 22, 22, 22, 22}), 
-                    new _Blocks(new int[] {41, 41, 41, 41, 41, 42, 42, 42, 42, 42}, new int[] {24, 24, 24, 24, 24, 24, 24, 24, 24, 24}),
-                    new _Blocks(new int[] {24, 24, 24, 24, 24, 25, 25, 25, 25, 25, 25, 25}, new int[] {30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30}),
-                    new _Blocks(new int[] {12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 13, 13, 13, 13, 13, 13, 13}, new int[] {24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24})),
+                new VersionBlockInfo(
+                    new Blocks(new int[] {87, 87, 87, 87, 87, 88}, new int[] {22, 22, 22, 22, 22, 22}), 
+                    new Blocks(new int[] {41, 41, 41, 41, 41, 42, 42, 42, 42, 42}, new int[] {24, 24, 24, 24, 24, 24, 24, 24, 24, 24}),
+                    new Blocks(new int[] {24, 24, 24, 24, 24, 25, 25, 25, 25, 25, 25, 25}, new int[] {30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30}),
+                    new Blocks(new int[] {12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 13, 13, 13, 13, 13, 13, 13}, new int[] {24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24})),
                 //Version 16
-                new _VersionBlockInfo(
-                    new _Blocks(new int[] {98, 98, 98, 98, 98, 99}, new int[] {24, 24, 24, 24, 24, 24}),
-                    new _Blocks(new int[] {45, 45, 45, 45, 45, 45, 45, 46, 46, 46}, new int[] {28, 28, 28, 28, 28, 28, 28, 28, 28, 28}),
-                    new _Blocks(new int[] {19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 20, 20}, new int[] {24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24}),
-                    new _Blocks(new int[] {15, 15, 15, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16}, new int[] {30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30})),
+                new VersionBlockInfo(
+                    new Blocks(new int[] {98, 98, 98, 98, 98, 99}, new int[] {24, 24, 24, 24, 24, 24}),
+                    new Blocks(new int[] {45, 45, 45, 45, 45, 45, 45, 46, 46, 46}, new int[] {28, 28, 28, 28, 28, 28, 28, 28, 28, 28}),
+                    new Blocks(new int[] {19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 20, 20}, new int[] {24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24}),
+                    new Blocks(new int[] {15, 15, 15, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16}, new int[] {30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30})),
 
                 // TODO: DO VERSIONS TO 40!!! HAVE TO CHANGE THE SIGNATURE TO NOT REPEAT THE VALUES SO MUCH
             
@@ -1194,21 +1191,21 @@ namespace CodeReader {
             
 
 
-            private struct _VersionBlockInfo {
-                public _VersionBlockInfo(_Blocks l, _Blocks m, _Blocks q, _Blocks h) {
+            private struct VersionBlockInfo {
+                public VersionBlockInfo(Blocks l, Blocks m, Blocks q, Blocks h) {
                     L = l;
                     M = m;
                     Q = q;
                     H = h;
                 }
-                public _Blocks L;
-                public _Blocks M;
-                public _Blocks Q;
-                public _Blocks H;
+                public Blocks L;
+                public Blocks M;
+                public Blocks Q;
+                public Blocks H;
             }
 
-            private struct _Blocks {
-                public _Blocks(int[] dataLengths, int[] errorCorrectionLengths) {
+            private struct Blocks {
+                public Blocks(int[] dataLengths, int[] errorCorrectionLengths) {
                     DataBlockLengths = dataLengths;
                     ErrorCorrectionBlockLengths = errorCorrectionLengths;
                 }
