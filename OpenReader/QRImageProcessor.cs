@@ -180,9 +180,7 @@ namespace CodeReader {
                     angleAdjacentToOppositeSidePoint = GetAdjacentAngle(oppositeSidePoint, adjacentSidePoint, topRightReferencePoint);
                     hypotenuse = topLeft.EstimatedHeight;
                 }
-                
 
-                // TODO THINK ABOUT THE SINS AND COSINS WHEN ROTATED
                 Console.WriteLine($"width: {hypotenuse}, scale: {scale}");
                 patternSideLength = Math.Cos(angleAdjacentToOppositeSidePoint) * hypotenuse;
                  
@@ -254,7 +252,6 @@ namespace CodeReader {
                 else {
                     transformationMatrix = GetTransformationMatrixWithThreePoints(pointsInImage, pointsInSampledCode);
                 }
-                System.Console.WriteLine(transformationMatrix);
                 
                 byte[,] resampledImage = new byte[outputSize, outputSize];
                 image = new Image<L8>(codeSideLength, codeSideLength);
@@ -437,9 +434,8 @@ namespace CodeReader {
                 Console.WriteLine($"middleAngle: {(angleBetweenTwoSides / 2)  / (2*Math.PI) * 360}, rotationAngle: {rotationAngle / (2*Math.PI) * 360}");
                 var alignmentVectorAngle = (angleBetweenTwoSides / 2) + rotationAngle;
 
-                // Asignment just for compiler, allways should be overwritten
+                // Asignment just for compiler, always should be overwritten
                 (double x, double y) alignmentUnitVector = (0,0);
-                // TODO SIN AND COSIN IS DIFFERENT FOR DIFFERENT ROTATIONS, SOMETIMES NEEDS TO BE SWITCHED!!
                 var topLeftCentroid = finderPatterns.TopLeftPattern.Centroid;
                 var topRightCentroid = finderPatterns.TopRightPattern.Centroid;
                 if ((topLeftCentroid.X <= topRightCentroid.X && topLeftCentroid.Y <= topRightCentroid.Y) ||
@@ -656,8 +652,8 @@ namespace CodeReader {
                 } 
             }
 
-            private struct ColorBloc {
-                public ColorBloc(int start, int end) {
+            private struct ColorBlock {
+                public ColorBlock(int start, int end) {
                     StartIndex = start;
                     EndIndex = end;
                 }
@@ -689,20 +685,20 @@ namespace CodeReader {
 
                 
                 // Finder pattern column color blocs ordered from top to bottom
-                private ColorBloc?[] _columnBlocs = new ColorBloc?[5];
-                private bool _currentColumnBlocUpIsWhite = false;
-                private bool _currentColumnBlocDownIsWhite = false;
-                private int _currentColumnBlocStart;
+                private ColorBlock?[] _columnBlocks = new ColorBlock?[5];
+                private bool _currentColumnBlockUpIsWhite = false;
+                private bool _currentColumnBlockDownIsWhite = false;
+                private int _currentColumnBlockStart;
                 private bool _isColumnInfoDisposed = true;
 
 
                 // Finder pattern row color blocs ordered from left to right
-                private ColorBloc?[] _rowBlocs = new ColorBloc?[5];
+                private ColorBlock?[] _rowBlocks = new ColorBlock?[5];
                 private int _row;
-                private int _currentRowBlocStart;
-                private bool? _currentRowBlocIsWhite;
+                private int _currentRowBlockStart;
+                private bool? _currentRowBlockIsWhite;
 
-                enum Bloc { 
+                enum Block { 
                     FirstBlack = 0,
                     FirstWhite = 1,
                     MiddleBlack = 2,
@@ -712,23 +708,23 @@ namespace CodeReader {
                 }
 
                 public int GetPatternWidth() {
-                    return (((ColorBloc)_rowBlocs[(int)Bloc.LastBlack]!).EndIndex - ((ColorBloc)_rowBlocs[(int)Bloc.FirstBlack]!).StartIndex);
+                    return (((ColorBlock)_rowBlocks[(int)Block.LastBlack]!).EndIndex - ((ColorBlock)_rowBlocks[(int)Block.FirstBlack]!).StartIndex);
                 }
 
                 public int GetPatternHeight() {
-                    return (((ColorBloc)_columnBlocs[(int)Bloc.LastBlack]!).EndIndex - ((ColorBloc)_columnBlocs[(int)Bloc.FirstBlack]!).StartIndex);
+                    return (((ColorBlock)_columnBlocks[(int)Block.LastBlack]!).EndIndex - ((ColorBlock)_columnBlocks[(int)Block.FirstBlack]!).StartIndex);
                 }
 
-                public int GetMiddleOfRowBlocs() {
-                    return (((ColorBloc)_rowBlocs[(int)Bloc.FirstBlack]!).StartIndex + ((ColorBloc)_rowBlocs[(int)Bloc.LastBlack]!).EndIndex) / 2;
+                public int GetMiddleOfRowBlocks() {
+                    return (((ColorBlock)_rowBlocks[(int)Block.FirstBlack]!).StartIndex + ((ColorBlock)_rowBlocks[(int)Block.LastBlack]!).EndIndex) / 2;
                 }
 
                 /// <summary>
                 /// Gets middle 'y' coordinate of column blocs. Call only if IsFinderPattern = true!
                 /// </summary>
                 /// <returns>Middle 'y' coordinate of column blocs.</returns>
-                public int GetMiddleOfColumnBlocs() {
-                    return (((ColorBloc)_columnBlocs[(int)Bloc.FirstBlack]!).StartIndex + ((ColorBloc)_columnBlocs[(int)Bloc.LastBlack]!).EndIndex) / 2;
+                public int GetMiddleOfColumnBlocks() {
+                    return (((ColorBlock)_columnBlocks[(int)Block.FirstBlack]!).StartIndex + ((ColorBlock)_columnBlocks[(int)Block.LastBlack]!).EndIndex) / 2;
                 }
 
                 public void AddNextRowPixel(byte pixelValue, int column) {
@@ -747,43 +743,43 @@ namespace CodeReader {
 
                 private void AddNextPixelWhite(int column) {
                     // If image row begins with white
-                    if (_rowBlocs[(int)Bloc.LastBlack] is null && _currentRowBlocIsWhite is null) {
-                        _currentRowBlocStart = column;
-                        _currentRowBlocIsWhite = true;
+                    if (_rowBlocks[(int)Block.LastBlack] is null && _currentRowBlockIsWhite is null) {
+                        _currentRowBlockStart = column;
+                        _currentRowBlockIsWhite = true;
                         return;
                     }
-                    if (_currentRowBlocIsWhite is true) {
+                    if (_currentRowBlockIsWhite is true) {
                         return;
                     }
 
                     // Move black blocs one to the left
-                    _rowBlocs[(int)Bloc.FirstBlack] = _rowBlocs[(int)Bloc.MiddleBlack];
-                    _rowBlocs[(int)Bloc.MiddleBlack] = _rowBlocs[(int)Bloc.LastBlack];
-                    _rowBlocs[(int)Bloc.LastBlack] = new ColorBloc(_currentRowBlocStart, column - 1);
+                    _rowBlocks[(int)Block.FirstBlack] = _rowBlocks[(int)Block.MiddleBlack];
+                    _rowBlocks[(int)Block.MiddleBlack] = _rowBlocks[(int)Block.LastBlack];
+                    _rowBlocks[(int)Block.LastBlack] = new ColorBlock(_currentRowBlockStart, column - 1);
 
-                    _currentRowBlocStart = column;
-                    _currentRowBlocIsWhite = true;
+                    _currentRowBlockStart = column;
+                    _currentRowBlockIsWhite = true;
 
-                    IsPossibleFinderPattern = IsBlocRatioCorrect(_rowBlocs);
+                    IsPossibleFinderPattern = IsBlockRatioCorrect(_rowBlocks);
                 }
 
                 private void AddNextPixelBlack(int column) {
                     // If image row begins with black
-                    if (_rowBlocs[(int)Bloc.LastWhite] is null && _currentRowBlocIsWhite is null) {
-                        _currentRowBlocStart = column;
-                        _currentRowBlocIsWhite = false;
+                    if (_rowBlocks[(int)Block.LastWhite] is null && _currentRowBlockIsWhite is null) {
+                        _currentRowBlockStart = column;
+                        _currentRowBlockIsWhite = false;
                         return;
                     }
-                    if (_currentRowBlocIsWhite is false) {
+                    if (_currentRowBlockIsWhite is false) {
                         return;
                     }
 
                     // Move white blocs one to the left
-                    _rowBlocs[(int)Bloc.FirstWhite] = _rowBlocs[(int)Bloc.LastWhite];
-                    _rowBlocs[(int)Bloc.LastWhite] = new ColorBloc(_currentRowBlocStart, column - 1);
+                    _rowBlocks[(int)Block.FirstWhite] = _rowBlocks[(int)Block.LastWhite];
+                    _rowBlocks[(int)Block.LastWhite] = new ColorBlock(_currentRowBlockStart, column - 1);
 
-                    _currentRowBlocStart = column;
-                    _currentRowBlocIsWhite = false;
+                    _currentRowBlockStart = column;
+                    _currentRowBlockIsWhite = false;
                 }
 
                 public void AddNextColumnPixelUp(byte pixelValue, int row) {
@@ -797,35 +793,35 @@ namespace CodeReader {
 
                 private void AddNextColumnPixelUpBlack(int row) {
                     // Top white bloc
-                    if (_columnBlocs[(int)Bloc.FirstWhite] is null && !_currentColumnBlocUpIsWhite) {
+                    if (_columnBlocks[(int)Block.FirstWhite] is null && !_currentColumnBlockUpIsWhite) {
                         return;
                     }
-                    if (!_currentColumnBlocUpIsWhite) {
+                    if (!_currentColumnBlockUpIsWhite) {
                         return;
                     }
 
                     // Set top white bloc
-                    _columnBlocs[(int)Bloc.FirstWhite] = new ColorBloc(row + 1, _currentColumnBlocStart);
+                    _columnBlocks[(int)Block.FirstWhite] = new ColorBlock(row + 1, _currentColumnBlockStart);
 
-                    _currentColumnBlocStart = row;
-                    _currentColumnBlocUpIsWhite = false;
+                    _currentColumnBlockStart = row;
+                    _currentColumnBlockUpIsWhite = false;
                 }
 
                 private void AddNextColumnPixelUpWhite(int row) {
-                    if (_currentColumnBlocUpIsWhite) {
+                    if (_currentColumnBlockUpIsWhite) {
                         return;
                     }
-                    if (_columnBlocs[(int)Bloc.MiddleBlack] is null) {
+                    if (_columnBlocks[(int)Block.MiddleBlack] is null) {
                         int invalid = Int32.MinValue;
-                        _columnBlocs[(int)Bloc.MiddleBlack] = new ColorBloc(row + 1, invalid);
+                        _columnBlocks[(int)Block.MiddleBlack] = new ColorBlock(row + 1, invalid);
 
-                        _currentColumnBlocStart = row;
-                        _currentColumnBlocUpIsWhite = true;
+                        _currentColumnBlockStart = row;
+                        _currentColumnBlockUpIsWhite = true;
                         return;
                     }
 
                     // Finish off top black bloc
-                    _columnBlocs[(int)Bloc.FirstBlack] = new ColorBloc(row + 1, _currentColumnBlocStart);
+                    _columnBlocks[(int)Block.FirstBlack] = new ColorBlock(row + 1, _currentColumnBlockStart);
                     NeedNextUpPixelVertical = false;
                 }
 
@@ -843,85 +839,85 @@ namespace CodeReader {
                 }
 
                 private void AddNextColumnPixelDownBlack(int row) {
-                    if (!_currentColumnBlocDownIsWhite) {
+                    if (!_currentColumnBlockDownIsWhite) {
                         return;
                     }
 
-                    _columnBlocs[(int)Bloc.LastWhite] = new ColorBloc(_currentColumnBlocStart, row - 1);
+                    _columnBlocks[(int)Block.LastWhite] = new ColorBlock(_currentColumnBlockStart, row - 1);
 
-                    _currentColumnBlocStart = row;
-                    _currentColumnBlocDownIsWhite = false;
+                    _currentColumnBlockStart = row;
+                    _currentColumnBlockDownIsWhite = false;
                 }
 
                 private void AddNextColumnPixelDownWhite(int row) {
-                    if (_currentColumnBlocDownIsWhite) {
+                    if (_currentColumnBlockDownIsWhite) {
                         return;
                     }
                     // Bottom white bloc
-                    if (!_currentColumnBlocDownIsWhite && _columnBlocs[(int)Bloc.LastWhite] is null) {
-                        _columnBlocs[(int)Bloc.MiddleBlack] = 
-                            new ColorBloc(((ColorBloc)_columnBlocs[(int)Bloc.MiddleBlack]!).StartIndex, row - 1);
+                    if (!_currentColumnBlockDownIsWhite && _columnBlocks[(int)Block.LastWhite] is null) {
+                        _columnBlocks[(int)Block.MiddleBlack] = 
+                            new ColorBlock(((ColorBlock)_columnBlocks[(int)Block.MiddleBlack]!).StartIndex, row - 1);
 
-                        _currentColumnBlocDownIsWhite = true;
-                        _currentColumnBlocStart = row;
+                        _currentColumnBlockDownIsWhite = true;
+                        _currentColumnBlockStart = row;
                         return;
                     }
 
-                    _columnBlocs[(int)Bloc.LastBlack] = new ColorBloc(_currentColumnBlocStart, row - 1);
+                    _columnBlocks[(int)Block.LastBlack] = new ColorBlock(_currentColumnBlockStart, row - 1);
                     NeedNextDownPixelVertical = false;
 
-                    IsFinderPattern = IsBlocRatioCorrect(_columnBlocs);
+                    IsFinderPattern = IsBlockRatioCorrect(_columnBlocks);
                 }
 
-                private bool IsBlocRatioCorrect(ColorBloc?[] blocs) {
+                private bool IsBlockRatioCorrect(ColorBlock?[] blocks) {
                     const float smallBlocRatio = 1/7f;
                     const float bigBlocRatio = 3/7f;
                     float errorMarginSmall = (smallBlocRatio / 100f) * 40;
                     float errorMarginBig = (bigBlocRatio / 100f) * 40;
 
-                    float allBlocsLength = 0;
-                    foreach (var bloc in blocs) {
-                        if (bloc is null) {
+                    float allBlocksLength = 0;
+                    foreach (var block in blocks) {
+                        if (block is null) {
                             return false;
                         }
 
-                        allBlocsLength += ((ColorBloc)bloc).Length;
+                        allBlocksLength += ((ColorBlock)block).Length;
                     }
 
 
-                    float blackBlocFirstRatio = ((ColorBloc)blocs[(int)Bloc.FirstBlack]!).Length / allBlocsLength;
-                    if (BlocRatioOutsideErrorMargin(blackBlocFirstRatio, smallBlocRatio, errorMarginSmall)) {
+                    float blackBlockFirstRatio = ((ColorBlock)blocks[(int)Block.FirstBlack]!).Length / allBlocksLength;
+                    if (BlockRatioOutsideErrorMargin(blackBlockFirstRatio, smallBlocRatio, errorMarginSmall)) {
                         return false;
                     }
-                    float whiteBlocFirstRatio = ((ColorBloc)blocs[(int)Bloc.FirstWhite]!).Length / allBlocsLength;
-                    if (BlocRatioOutsideErrorMargin(whiteBlocFirstRatio, desiredBlocRatio: smallBlocRatio, errorMarginSmall)) {
+                    float whiteBlockFirstRatio = ((ColorBlock)blocks[(int)Block.FirstWhite]!).Length / allBlocksLength;
+                    if (BlockRatioOutsideErrorMargin(whiteBlockFirstRatio, desiredBlockRatio: smallBlocRatio, errorMarginSmall)) {
                         return false;
                     }
-                    float blackBlocMiddleRatio = ((ColorBloc)blocs[(int)Bloc.MiddleBlack]!).Length / allBlocsLength;
-                    if (BlocRatioOutsideErrorMargin(blackBlocMiddleRatio, desiredBlocRatio: bigBlocRatio, errorMarginBig)) {
+                    float blackBlockMiddleRatio = ((ColorBlock)blocks[(int)Block.MiddleBlack]!).Length / allBlocksLength;
+                    if (BlockRatioOutsideErrorMargin(blackBlockMiddleRatio, desiredBlockRatio: bigBlocRatio, errorMarginBig)) {
                         return false;
                     }
-                    float whiteBlocLastRatio = ((ColorBloc)blocs[(int)Bloc.LastWhite]!).Length / allBlocsLength;
-                    if (BlocRatioOutsideErrorMargin(whiteBlocLastRatio, desiredBlocRatio: smallBlocRatio, errorMarginSmall)) {
+                    float whiteBlockLastRatio = ((ColorBlock)blocks[(int)Block.LastWhite]!).Length / allBlocksLength;
+                    if (BlockRatioOutsideErrorMargin(whiteBlockLastRatio, desiredBlockRatio: smallBlocRatio, errorMarginSmall)) {
                         return false;
                     }
-                    float blackBlocLastRatio = ((ColorBloc)blocs[(int)Bloc.LastBlack]!).Length / allBlocsLength;
-                    if (BlocRatioOutsideErrorMargin(blackBlocLastRatio, desiredBlocRatio: smallBlocRatio, errorMarginSmall)) {
+                    float blackBlockLastRatio = ((ColorBlock)blocks[(int)Block.LastBlack]!).Length / allBlocksLength;
+                    if (BlockRatioOutsideErrorMargin(blackBlockLastRatio, desiredBlockRatio: smallBlocRatio, errorMarginSmall)) {
                         return false;
                     }
 
                     return true;
                 }
 
-                bool BlocRatioOutsideErrorMargin(float blocRatio, float desiredBlocRatio, float errorMargin) {
-                    return (blocRatio < desiredBlocRatio - errorMargin || 
-                            blocRatio > desiredBlocRatio + errorMargin);
+                bool BlockRatioOutsideErrorMargin(float blockRatio, float desiredBlockRatio, float errorMargin) {
+                    return (blockRatio < desiredBlockRatio - errorMargin || 
+                            blockRatio > desiredBlockRatio + errorMargin);
                 }
 
                 private void DisposeColumnInfo() {
                     IsFinderPattern = false;
-                    _columnBlocs = new ColorBloc?[5];
-                    _currentColumnBlocUpIsWhite = false;
+                    _columnBlocks = new ColorBlock?[5];
+                    _currentColumnBlockUpIsWhite = false;
                     _isColumnInfoDisposed = true;
                     NeedNextDownPixelVertical = true;
                     NeedNextUpPixelVertical = true;
@@ -948,9 +944,9 @@ namespace CodeReader {
                             continue;
                         }
 
-                        // Check vertical ---- TODO: SHOULD BE A FUNCTION
-
-                        int centerOfMiddleBloc = finderExtractor.GetMiddleOfRowBlocs();
+                        // Check vertical ---- This section could be a function
+                        
+                        int centerOfMiddleBloc = finderExtractor.GetMiddleOfRowBlocks();
                         int checkVerticalY = y;
                         // Check blocs up
                         while (checkVerticalY > 0 && finderExtractor.NeedNextUpPixelVertical) {
@@ -972,7 +968,7 @@ namespace CodeReader {
 
                         if (finderExtractor.IsFinderPattern) {
 
-                            var centroid = new Point<int>(centerOfMiddleBloc + 1, finderExtractor.GetMiddleOfColumnBlocs());
+                            var centroid = new Point<int>(centerOfMiddleBloc + 1, finderExtractor.GetMiddleOfColumnBlocks());
                             var pattern = new QRFinderPattern(centroid, finderExtractor.GetPatternWidth(), finderExtractor.GetPatternHeight());
                             finderPatternPixels.Add(pattern);
                         }
