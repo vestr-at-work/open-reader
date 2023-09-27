@@ -50,9 +50,6 @@ namespace CodeReader {
         
         public static bool TryParseQRCode<TPixel>(Image<TPixel> image, out QRCodeParsed? rawDataMatrix) 
             where TPixel : unmanaged, IPixel<TPixel> {
-
-            Stopwatch sw = new Stopwatch();
-            sw.Start();
             
             ResizeImage(image);
             
@@ -104,9 +101,6 @@ namespace CodeReader {
                 version, 
                 out Image<L8> testImage
             );
-
-            sw.Stop();
-            Console.WriteLine($"time: {sw.Elapsed}");
 
             binarizedImage.Save("../TestData/QRCodeTestOUTPUT.png");
             testImage.Save("../TestData/QRCodeTestResampledOUTPUT.png");
