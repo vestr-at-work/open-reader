@@ -2,10 +2,6 @@ using System.Diagnostics;
 using CodeReaderCommons;
 using System.Numerics;
 using MathNet.Numerics.LinearAlgebra;
-using System.Reflection.Metadata.Ecma335;
-using System.Globalization;
-using MathNet.Numerics.Optimization.TrustRegion;
-using System.Net.Http.Headers;
 
 
 namespace CodeReader {
@@ -58,19 +54,7 @@ namespace CodeReader {
             Stopwatch sw = new Stopwatch();
             sw.Start();
             
-            // TODO: Make a method for this
-            if (image.Width > 300 && image.Width > image.Height) {
-                //when one side is equal to 0 the side gets scaled to preserve the ratio of original image
-                image.Mutate(x => x.Resize(300, 0));
-            }
-            else if (image.Height > 300 && image.Height > 1.7 * image.Width) {
-                //when one side is equal to 0 the side gets scaled to preserve the ratio of original image
-                image.Mutate(x => x.Resize(0, 450));
-            }
-            else if (image.Height > 300 && image.Height > image.Width) {
-                //when one side is equal to 0 the side gets scaled to preserve the ratio of original image
-                image.Mutate(x => x.Resize(0, 300));
-            }
+            ResizeImage(image);
             
             image.Mutate(x => x.Grayscale());
             var binarizedImage = Commons.Binarize(image);
@@ -133,6 +117,23 @@ namespace CodeReader {
             var size = 17 + (4 * version);
             rawDataMatrix = new QRCodeParsed(new QRVersion {Version = version}, size, qrDataMatrix);
             return true;
+        }
+
+        private static void ResizeImage<TPixel>(Image<TPixel> image) 
+            where TPixel : unmanaged, IPixel<TPixel> {
+
+            if (image.Width > 300 && image.Width > image.Height) {
+                //when one side is equal to 0 the side gets scaled to preserve the ratio of original image
+                image.Mutate(x => x.Resize(300, 0));
+            }
+            else if (image.Height > 300 && image.Height > 1.7 * image.Width) {
+                //when one side is equal to 0 the side gets scaled to preserve the ratio of original image
+                image.Mutate(x => x.Resize(0, 450));
+            }
+            else if (image.Height > 300 && image.Height > image.Width) {
+                //when one side is equal to 0 the side gets scaled to preserve the ratio of original image
+                image.Mutate(x => x.Resize(0, 300));
+            }
         }
 
         /// <summary>
