@@ -55,31 +55,25 @@ namespace CodeReader {
             var binarizedImage = Commons.Binarize(image);
 
             if (!QRPatternFinder.TryGetFinderPatterns(binarizedImage, out QRFinderPatternTrio finderPatterns)) {
-                binarizedImage.Save("../TestData/QRCodeTestOUTPUT.png");
+                binarizedImage.Save("../DebugImages/QRCodeTestOUTPUT.png");
                 binarizedImage.Dispose();
 
                 rawDataMatrix = null;
                 return false;
             }
 
-            Console.WriteLine($"topLeft: {finderPatterns.TopLeftPattern}");
-            Console.WriteLine($"topRight: {finderPatterns.TopRightPattern}");
-            Console.WriteLine($"bottomLeft: {finderPatterns.BottomLeftPattern}");
-
             double moduleSize = QRInfoExtractor.GetModuleSize(finderPatterns, out double rotationAngle);
-            int version = QRInfoExtractor.GetVersion(finderPatterns, moduleSize, rotationAngle);
-
-            Console.WriteLine($"moduleSize: {moduleSize}, version: {version}");
+            QRVersion version = QRInfoExtractor.GetVersion(finderPatterns, moduleSize, rotationAngle);
 
             Point<int>? alignmentPatternCentroid = null;
-            if (version > 1) {
+            if (version.Version > 1) {
+                int alignmentPatternWindow = image.Width / 6;
                 var approxAlignmentPatternCentroid = QRPatternFinder.GetApproximateAlignmentPatternCentroid(finderPatterns);
-                System.Console.WriteLine(approxAlignmentPatternCentroid);
                 // TODO Add checking if rectangle bounds not outside the image
-                Rectangle alignmentPatternNeighborhood = new Rectangle(approxAlignmentPatternCentroid.X - 30, approxAlignmentPatternCentroid.Y - 30, 60, 60);
+                Rectangle alignmentPatternNeighborhood = new Rectangle(approxAlignmentPatternCentroid.X - alignmentPatternWindow / 2, approxAlignmentPatternCentroid.Y - alignmentPatternWindow / 2, alignmentPatternWindow, alignmentPatternWindow);
 
                 if (!QRPatternFinder.TryGetAlignmentPattern(binarizedImage, alignmentPatternNeighborhood, out Point<int> alignmentPatternCentroidNonNullable)) {
-                    binarizedImage.Save("../TestData/QRCodeTestOUTPUT.png");
+                    binarizedImage.Save("../DebugImages/QRCodeTestOUTPUT.png");
                     binarizedImage.Dispose();
 
                     rawDataMatrix = null;
@@ -87,8 +81,6 @@ namespace CodeReader {
                 }
 
                 alignmentPatternCentroid = alignmentPatternCentroidNonNullable;
-
-                Console.WriteLine($"alignmentPatter: {alignmentPatternCentroid}");
             }
             
 
@@ -96,18 +88,14 @@ namespace CodeReader {
                 binarizedImage, 
                 finderPatterns,
                 alignmentPatternCentroid, 
-                version, 
-                out Image<L8> testImage
+                version
             );
 
-            binarizedImage.Save("../TestData/QRCodeTestOUTPUT.png");
-            testImage.Save("../TestData/QRCodeTestResampledOUTPUT.png");
-
+            binarizedImage.Save("../DebugImages/QRCodeTestOUTPUT.png");
             binarizedImage.Dispose();
-            testImage.Dispose();
             
-            var size = 17 + (4 * version);
-            rawDataMatrix = new QRCodeParsed(new QRVersion {Version = version}, size, qrDataMatrix);
+            var size = 17 + (4 * version.Version);
+            rawDataMatrix = new QRCodeParsed(version, size, qrDataMatrix);
             return true;
         }
 
@@ -140,6 +128,7 @@ namespace CodeReader {
             /// <param name="patterns">Finder patterns.</param>
             /// <returns>Size of the module.</returns>
             public static double GetModuleSize(QRFinderPatternTrio patterns, out double rotationAngle) {
+                const int sizeOfFinderPattern = 7;
                 var topLeft = patterns.TopLeftPattern;
                 var topRight = patterns.TopRightPattern;
                 var bottomLeft = patterns.BottomLeftPattern;
@@ -179,11 +168,10 @@ namespace CodeReader {
                     hypotenuse = topLeft.EstimatedHeight;
                 }
 
-                Console.WriteLine($"width: {hypotenuse}, scale: {scale}");
                 patternSideLength = Math.Cos(angleAdjacentToOppositeSidePoint) * hypotenuse;
                  
                 rotationAngle = angleAdjacentToOppositeSidePoint;
-                return (patternSideLength * scale) / 7;
+                return (patternSideLength * scale) / sizeOfFinderPattern;
                 
             }
 
@@ -195,16 +183,13 @@ namespace CodeReader {
             /// <param name="moduleSize">QR code's estimated module size.</param>
             /// <param name="rotationAngle"></param>
             /// <returns>Estimated version of the QR code.</returns>
-            public static int GetVersion(QRFinderPatternTrio patterns, double moduleSize, double rotationAngle) {
+            public static QRVersion GetVersion(QRFinderPatternTrio patterns, double moduleSize, double rotationAngle) {
                 var topLeft = patterns.TopLeftPattern;
                 var topRight = patterns.TopRightPattern;
 
                 double version = (((topLeft.Centroid.DistanceFrom(topRight.Centroid) / moduleSize) - 10) / 4);
 
-                Console.WriteLine(topLeft.Centroid.DistanceFrom(topRight.Centroid));
-                Console.WriteLine($"cos: {Math.Cos(rotationAngle)}, angle: {rotationAngle / (2 * Math.PI) * 360}, version: {version}");
-
-                return Convert.ToInt32(version);
+                return new QRVersion() {Version = Convert.ToInt32(version)};
             }
         }
 
@@ -224,8 +209,8 @@ namespace CodeReader {
             /// <param name="moduleSize">Size of one module of the QR code.</param>
             /// <param name="version">Estimated version of the QR code.</param>
             /// <returns>Sampled QR code image data. Value 0 means black, value 255 means white.</returns>
-            public static byte[,] Sample(Image<L8> binerizedImage, QRFinderPatternTrio patterns, Point<int>? mainAlignmentPatternCentroid, int version, out Image<L8> image) {
-                int codeSideLength = 17 + (4 * version);
+            public static byte[,] Sample(Image<L8> binerizedImage, QRFinderPatternTrio patterns, Point<int>? mainAlignmentPatternCentroid, QRVersion version) {
+                int codeSideLength = 17 + (4 * version.Version);
                 int outputSize = codeSideLength;
 
                 List<Point<double>> pointsInImage = new List<Point<double>>() {
@@ -241,7 +226,7 @@ namespace CodeReader {
                 };
 
                 Matrix<double> transformationMatrix;
-                if (version > 1 && mainAlignmentPatternCentroid is not null) {
+                if (version.Version > 1 && mainAlignmentPatternCentroid is not null) {
                     pointsInImage.Add((Point<double>)mainAlignmentPatternCentroid);
                     pointsInSampledCode.Add(new Point<double>(codeSideLength - 6.5, codeSideLength - 6.5));
 
@@ -252,7 +237,7 @@ namespace CodeReader {
                 }
                 
                 byte[,] resampledImage = new byte[outputSize, outputSize];
-                image = new Image<L8>(codeSideLength, codeSideLength);
+                var debugImage = new Image<L8>(codeSideLength, codeSideLength);
 
                 for (int y = 0; y < outputSize; y++) {
                     for (int x = 0; x < outputSize; x++) {
@@ -276,10 +261,13 @@ namespace CodeReader {
                             byte pixelValue = binerizedImage[pixelX, pixelY].PackedValue;
 
                             resampledImage[x, y] = pixelValue;
-                            image[x, y] = new L8(pixelValue);
+                            debugImage[x, y] = new L8(pixelValue);
                         }
                     }
                 }
+
+                debugImage.Save("../DebugImages/QRCodeDebugImageAlignmentPattern.png");
+                debugImage.Dispose();
 
                 return resampledImage;
             }
@@ -395,7 +383,7 @@ namespace CodeReader {
             public static bool TryGetAlignmentPattern(Image<L8> image, Rectangle alignmentNeighborhood, out Point<int> alignmentPatternCentroid) {
                 Image<L8> subimage = image.Clone(i => i.Crop(alignmentNeighborhood));
                 var extractor = new AlignmentPatternExtractor(subimage);
-                subimage.Save("../TestData/QRCodeTestAlignmentOUTPUT.png");
+                subimage.Save("../DebugImages/QRCodeTestAlignmentOUTPUT.png");
                 subimage.Dispose();
 
                 if (!extractor.TryGetPattern(out Point<int> localAlignmentPatternCentroid)) {
@@ -429,7 +417,6 @@ namespace CodeReader {
                         finderPatterns.TopLeftPattern.Centroid.Y), 
                     finderPatterns.TopRightPattern.Centroid);
 
-                Console.WriteLine($"middleAngle: {(angleBetweenTwoSides / 2)  / (2*Math.PI) * 360}, rotationAngle: {rotationAngle / (2*Math.PI) * 360}");
                 var alignmentVectorAngle = (angleBetweenTwoSides / 2) + rotationAngle;
 
                 // Asignment just for compiler, always should be overwritten
@@ -481,7 +468,6 @@ namespace CodeReader {
                     CalculateWhiteComponents();
                     CalculateBlackComponents();
 
-                    Console.WriteLine($"{_blackComponentPoints.Count}, {_whiteComponentCount}");
                     if (!TryGetAlignmentPatternCenterComponent(out int componentNumber)) {
                         patternCentroid = new Point<int>();
                         return false;
