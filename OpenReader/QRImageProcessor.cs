@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using CodeReaderCommons;
 using System.Numerics;
 using MathNet.Numerics.LinearAlgebra;
@@ -945,7 +944,7 @@ namespace CodeReader {
                         }
 
                         // Check vertical ---- This section could be a function
-                        
+
                         int centerOfMiddleBloc = finderExtractor.GetMiddleOfRowBlocks();
                         int checkVerticalY = y;
                         // Check blocs up
