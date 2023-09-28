@@ -1,6 +1,40 @@
 # 📖 Open Reader
 Open-Source QR Code Reader written and availabe for use in C#.
 
+## User documentation
+As of right now the project is showcased in an CLI demo application.
+The basic use consists of cloning the project and building the **CodeReaderCommons** library by executing the following command in the `/CodeReaderCommons` directory. 
+```shell
+dotnet build
+``` 
+Then finally running the following command in the `/OpenReader` directory with the path to the input image as a first argument.
+```shell
+dotnet run "path/to/your/input/image"
+```
+If decoding successful program will print the following.
+```shell
+Result: "Content of the QR Code."
+```
+If decoding fails program will print one of the following depending on the situation that occured.
+```console
+Error: Need path to the QR code image as a first position argument.
+```
+
+```console
+Error: Could not recognize QR code symbol in the image.
+```
+
+```console
+Error: Could not load format info from the QR code symbol. Possibly too corrupted image.
+```
+
+```console
+Error: Could not load QR code data properly. Possibly too corrupted image.
+```
+
+>Remarks:
+>Only QR codes **up to Version 16 and in the byte encoding are supported**. This will be expanded in the future.
+
 ## Specification in Czech
 >Cílem programu je konzolová aplikace v jazyce C#, která na standardním vstupu dostane cestu k
 obrázku/fotce QR kódu ( https://en.wikipedia.org/wiki/QR_code# ) a na standardní výstup vypíše
