@@ -1,42 +1,22 @@
 
-using System.Collections;
 using System.Text;
 using MathNet.Numerics;
 using STH1123.ReedSolomon;
 
 namespace CodeReader {
+
+    interface IQRDataDecoder {
+        public bool TryGetData(QRCodeParsed codeData, QRFormatInfo formatInfo, out List<DecodedData> decodedData);
+    }
+
     /// <summary>
-    /// Internal class encapsulating methods for decoding QR code.
-    /// Main public methods are 'TryGetFormatInfo' and 'TryGetData'.
+    /// Class encapsulating methods for decoding QR code data.
+    /// Main public method is 'TryGetData'.
     /// </summary>
-    class QRDecoder {
-        /// <summary>
-        /// Method for getting the format info (error correction level and data mask) from parsed QR code.
-        /// </summary>
-        /// <param name="code">Parsed QR code.</param>
-        /// <param name="formatInfo">Filled FormatInfo if sucessful, else empty FormatInfo.</param>
-        /// <returns>True if successful, false if failed.</returns>
-        public static bool TryGetFormatInfo(QRCodeParsed code, out QRFormatInfo formatInfo) {
-            ushort mainFormatInfoRawData = GetMainFormatInfoData(code);
-            if (TryParseFormatInfo(mainFormatInfoRawData, out QRFormatInfo parsedFormatInfo)) {
-                formatInfo = parsedFormatInfo;
-                return true;
-            }
-
-            ushort secondaryFormatInfoRawData = GetSecondaryFormatInfoData(code);
-            if (TryParseFormatInfo(secondaryFormatInfoRawData, out parsedFormatInfo)) {
-                formatInfo = parsedFormatInfo;
-                return true;
-            }
-            
-            formatInfo = new QRFormatInfo();
-            return false;
-        }
-
-        public static bool TryGetData(QRCodeParsed codeData, QRFormatInfo formatInfo, out List<DecodedData> decodedData) {
+    class QRDataDecoder : IQRDataDecoder{
+        public bool TryGetData(QRCodeParsed codeData, QRFormatInfo formatInfo, out List<DecodedData> decodedData) {
             IQRUnmaskedDataProvider dataProvider = new DataAreaAccesor(codeData, formatInfo.DataMask);
             IQRRawCodewordProvider codewordProvider = new CodewordCompletor(dataProvider);
-            // TODO replace this class with an interface
             IBlockErrorCorrector codewordCorrector = new ReedSolomonErrorCorrector(GenericGF.QR_CODE_FIELD_256);
 
             var codewordManager = new CodewordManager(codeData.Version, formatInfo.ErrorCorrectionLevel, codewordProvider, codewordCorrector);
@@ -120,7 +100,7 @@ namespace CodeReader {
             private static class DataAreaCheckerFactory {
                 public static DataAreaChecker GetChecker(int codeSize, QRVersion codeVersion) {
                     var functionAreaPoints = new HashSet<Point<int>>();
-                    var version = codeVersion.Version; 
+                    var version = codeVersion.value; 
                     functionAreaPoints.UnionWith(GetFunctionalPointsCommonForAllVersions(codeSize));
 
                     if (version > 6) {
@@ -595,37 +575,37 @@ namespace CodeReader {
             private static int GetCharacterCountIndicatorLength(QRVersion version, QRMode mode) {
                 switch (mode) {
                     case QRMode.Numeric:
-                        if (version.Version <= 9) {
+                        if (version.value <= 9) {
                             return 10;
                         }
-                        else if (version.Version <= 26) {
+                        else if (version.value <= 26) {
                             return 12;
                         }
                         else {
                             return 14;
                         }
                     case QRMode.Alphanumeric:
-                        if (version.Version <= 9) {
+                        if (version.value <= 9) {
                             return 9;
                         }
-                        else if (version.Version <= 26) {
+                        else if (version.value <= 26) {
                             return 11;
                         }
                         else {
                             return 13;
                         }
                     case QRMode.Byte:
-                        if (version.Version <= 9) {
+                        if (version.value <= 9) {
                             return 8;
                         }
                         else {
                             return 16;
                         }
                     case QRMode.Kanji:
-                        if (version.Version <= 9) {
+                        if (version.value <= 9) {
                             return 8;
                         }
-                        else if (version.Version <= 26) {
+                        else if (version.value <= 26) {
                             return 10;
                         }
                         else {
@@ -680,7 +660,6 @@ namespace CodeReader {
                 }
             }
 
-            // TODO Change the api for END OF MESSAGE mode!
             private static bool TryGetMode(byte firstByte, byte secondByte, int offset, out QRMode result) {
                 byte resultByte;
                 if (offset + _modeIndicatorLength <= _byteSize) {
@@ -798,198 +777,6 @@ namespace CodeReader {
             }
         }
 
-        /// <summary>
-        /// Gets the main format info data located around the top left finder pattern.
-        /// </summary>
-        /// <param name="code">Parsed QR code.</param>
-        /// <returns>15 bit format info in the MSb order in ushort type.</returns>
-        private static ushort GetMainFormatInfoData(QRCodeParsed code) {
-            var accesor = new FormatInfoAccesor(code.Data, code.Size, true);
-            return GetFormatInfoAsNumber(accesor);
-        }
-
-        /// <summary>
-        /// Gets the secondary (aka redundant) format info data located 
-        /// under the top right finder pattern and to the right of the bottom left finder pattern.
-        /// </summary>
-        /// <param name="code">Parsed QR code.</param>
-        /// <returns>15 bit format info in the MSb order in ushort type.</returns>
-        private static ushort GetSecondaryFormatInfoData(QRCodeParsed code) {
-            var accesor = new FormatInfoAccesor(code.Data, code.Size, false);
-            return GetFormatInfoAsNumber(accesor);
-        }
-
-        private static ushort GetFormatInfoAsNumber(FormatInfoAccesor accesor) {
-            ushort result = 0;
-            ushort oneAtOrder = 1;
-            foreach(var module in accesor.GetFormatModules()) {
-                if (module == 0) {
-                    result |= oneAtOrder;
-                }
-
-                // Move to next order
-                oneAtOrder <<= 1;
-            }
-
-            return result;
-        }
-
-        /// <summary>
-        /// Private class for accesing the module values in the format info areas.
-        /// Main public method is itterator method 'GetFormatModules'.
-        /// </summary>
-        private class FormatInfoAccesor {
-            /// <summary>
-            /// FormatInfoAccesor Ctor.
-            /// </summary>
-            /// <param name="data">QR code data matrix.</param>
-            /// <param name="size">QR code size.</param>
-            /// <param name="isMain">Set true if accesor is accesing main format info, set flase if accesing secondary one.</param>
-            public FormatInfoAccesor(byte[,] data, int size, bool isMain) {
-                _data = data;
-                _size = size;
-                _isMain = isMain;
-            }
-            // True if accesor is accesing main format info, flase if accesing secondary one
-            private bool _isMain;
-            // QR code data matrix
-            private byte[,] _data;
-            // QR code size
-            private int _size;
-
-            /// <summary>
-            /// Itterates over format info module values and yield returns them.
-            /// </summary>
-            /// <returns>Format info module values.</returns>
-            public IEnumerable<byte> GetFormatModules() {
-                if (_isMain) {
-                    int x = 8;
-                    int y = 0;
-                    while (y < 8) {
-                        if (y == 6) {
-                            y++;
-                            continue;
-                        }
-
-                        yield return _data[x, y];
-                        y++;
-                    }
-
-                    while (x >= 0) {
-                        if (x == 6) {
-                            x--;
-                            continue;
-                        }
-
-                        yield return _data[x, y];
-                        x--;
-                    }
-                }
-                else {
-                    int x = _size - 1;
-                    int y = 7;
-                    while (x > _size - 1 - 8) {
-                        yield return _data[x, y];
-                        x--;
-                    }
-
-                    x = 8;
-                    y = _size - 1 - 7;
-                    while  (y < _size) {
-                        yield return _data[x, y];
-                        y++;
-                    }
-                }
-            }
-        }
-
-        private static bool TryParseFormatInfo(ushort rawFormatInfoData, out QRFormatInfo parsedFormatInfo) {
-            ushort XorMask = 0b101_0100_0001_0010;
-            ushort unmaskedData = (ushort)(rawFormatInfoData ^ XorMask); 
-
-            ushort lowestDistance = ushort.MaxValue;
-            ushort? closestValidFormatInfoSequence = null;
-            foreach (var validFormatInfoSequence in _validFomatInfoSequences) {
-                ushort distanceInBinaryOnes = (ushort)(unmaskedData ^ validFormatInfoSequence);
-                ushort distance = GetNumberOfOnesInBinary(distanceInBinaryOnes);
-
-                if (distance < lowestDistance) {
-                    lowestDistance = distance;
-                    closestValidFormatInfoSequence = validFormatInfoSequence;
-                }
-            }
-
-            if (lowestDistance > 3 || closestValidFormatInfoSequence is null) {
-                parsedFormatInfo = new QRFormatInfo();
-                return false;
-            }
-
-            // To mask only the bits of interest
-            ushort errorCorrectionLevelMask = 0b110_0000_0000_0000;
-            ushort dataMaskMask = 0b001_1100_0000_0000;
-
-            QRErrorCorrectionLevel errorCorrectionLevel = (QRErrorCorrectionLevel)((closestValidFormatInfoSequence & errorCorrectionLevelMask) >> 13);
-            QRDataMask dataMask = (QRDataMask)((closestValidFormatInfoSequence & dataMaskMask) >> 10);
-
-            parsedFormatInfo = new QRFormatInfo() {ErrorCorrectionLevel = errorCorrectionLevel, DataMask = dataMask};
-            return true;
-        }
-
-
-        // Maybe could be generic
-        private static ushort GetNumberOfOnesInBinary(ushort number) {
-            int ordersCount = sizeof(ushort) * 8;
-
-            ushort oneCount = 0;
-            for (int i  = 0; i < ordersCount; i++) {
-                if(number % 2 == 1) {
-                    oneCount++;
-                }
-                number /= 2;
-            }
-
-            return oneCount;
-        }
-
-
-        /// <summary>
-        /// Readonly list of all of the valid format info sequences. Bits in sequences are in MSb order.
-        /// </summary>
-        /// <value></value>
-        private static readonly ushort[] _validFomatInfoSequences = {
-            0b000_0000_0000_0000,
-            0b000_0101_0011_0111,
-            0b000_1010_0110_1110,
-            0b000_1111_0101_1001,
-            0b001_0001_1110_1011,
-            0b001_0100_1101_1100,
-            0b001_1011_1000_0101,
-            0b001_1110_1011_0010,
-            0b010_0011_1101_0110,
-            0b010_0110_1110_0001,
-            0b010_1001_1011_1000,
-            0b010_1100_1000_1111,
-            0b011_0010_0011_1101,
-            0b011_0111_0000_1010,
-            0b011_1000_0101_0011,
-            0b011_1101_0110_0100,
-            0b100_0010_1001_1011,
-            0b100_0111_1010_1100,
-            0b100_1000_1111_0101,
-            0b100_1101_1100_0010,
-            0b101_0011_0111_0000,
-            0b101_0110_0100_0111,
-            0b101_1001_0001_1110,
-            0b101_1100_0010_1001,
-            0b110_0001_0100_1101,
-            0b110_0100_0111_1010,
-            0b110_1011_0010_0011,
-            0b110_1110_0001_0100,
-            0b111_0000_1010_0110,
-            0b111_0101_1001_0001,
-            0b111_1010_1100_1000,
-            0b111_1111_1111_1111
-        };
 
         private static readonly (int count, int[] rowColumnCoordinates)[] _alignmentPatternCountAndCoordsByVersion = {
             // Version 0 does not exist
@@ -1064,7 +851,7 @@ namespace CodeReader {
             }
 
             private static Blocks GetBlocks(QRVersion version, QRErrorCorrectionLevel errorCorrectionLevel) {
-                var blockInfo = _blockInfoByVersion[version.Version];
+                var blockInfo = _blockInfoByVersion[version.value];
 
                 switch(errorCorrectionLevel) {
                     case QRErrorCorrectionLevel.L:

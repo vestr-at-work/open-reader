@@ -1,12 +1,12 @@
 
 namespace CodeReader {
     public struct QRVersion {
-        private int _version;
-        public int Version { 
-            get => _version; 
+        private int _value;
+        public int value { 
+            get => _value; 
             set {
                 if (value <= 40 && value >= 1) {
-                    _version = value;
+                    _value = value;
                 }
             }
         }

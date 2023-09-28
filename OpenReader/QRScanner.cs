@@ -11,14 +11,22 @@ namespace CodeReader {
         /// </summary>
         /// <param name="image">Input image</param>
         public ScanResult Scan<TPixel>(Image<TPixel> image) where TPixel : unmanaged, IPixel<TPixel> {
-            
-            if (!QRImageProcessor.TryParseQRCode(image, out QRCodeParsed? QRCode)) {
+            IQRPatternFinder patternFinder = new QRPatternFinder();
+            IQRImageSampler sampler = new QRImageSampler();
+            IQRInfoExtractor infoExtractor = new QRInfoExtractor();
+            var symbolExtractor = new QRSymbolExtractor(patternFinder, infoExtractor, sampler);
+
+            if (!symbolExtractor.TryParseQRCode(image, out QRCodeParsed? QRCode)) {
                 return new ScanResult() { Success = false, ErrorMessage = "Could not recognize QR code symbol in the image." };
             }
-            if (!QRDecoder.TryGetFormatInfo(QRCode!, out QRFormatInfo formatInfo)) {
+
+            IQRFormatDecoder formatDecoder = new QRFormatDecoder();
+            if (!formatDecoder.TryGetFormatInfo(QRCode!, out QRFormatInfo formatInfo)) {
                 return new ScanResult() { Success = false, ErrorMessage = "Could not load format info from the QR code symbol. Possibly too corrupted image." };
             }
-            if (!QRDecoder.TryGetData(QRCode!, formatInfo, out List<DecodedData> decodedData)) {
+
+            IQRDataDecoder dataDecoder = new QRDataDecoder();
+            if (!dataDecoder.TryGetData(QRCode!, formatInfo, out List<DecodedData> decodedData)) {
                 return new ScanResult() { Success = false, ErrorMessage = "Could not load QR code data properly. Possibly too corrupted image." };
             }
 

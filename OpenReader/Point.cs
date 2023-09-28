@@ -2,7 +2,7 @@
 using System.Numerics;
 
 namespace CodeReader {
-    struct Point<TUnderlying> : IEquatable<Point<TUnderlying>>
+    public struct Point<TUnderlying> : IEquatable<Point<TUnderlying>>
          where TUnderlying : INumber<TUnderlying>, IConvertible {
         public Point(TUnderlying x, TUnderlying y) {
             X = x;
