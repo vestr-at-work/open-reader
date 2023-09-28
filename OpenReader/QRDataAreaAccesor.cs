@@ -3,6 +3,7 @@ namespace CodeReader {
     interface IQRUnmaskedDataProvider {
         public IEnumerable<byte> GetData();
     }
+    
     class QRDataAreaAccesor : IQRUnmaskedDataProvider {
         private QRCodeParsed _code;
         private Predicate<Point<int>> _isMaskedPoint;
