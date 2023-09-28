@@ -11,8 +11,8 @@ Then finally running the following command in the `/OpenReader` directory with t
 ```shell
 dotnet run "path/to/your/input/image"
 ```
-If decoding successful program will print the following.
-```shell
+If decoding is successful program will print the following.
+```console
 Result: "Content of the QR Code."
 ```
 If decoding fails program will print one of the following depending on the situation that occured.
