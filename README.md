@@ -1,5 +1,5 @@
 # 📖 Open Reader
-Open-Source QR Code Reader written and availabe for use in C#.
+Open-Source QR Code Reader written and available for use in C#.
 
 ## User documentation
 As of right now the project is showcased in an CLI demo application.
